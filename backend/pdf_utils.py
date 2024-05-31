@@ -50,20 +50,20 @@ def get_cords_of_word(gpt_json_data: dict, pdf_path):
                     for item in value:
                         for k, v in item.items():
                             data = page.search(
-                                v, 
-                                regex=False, 
-                                case=True, 
-                                return_chars=False, 
+                                v,
+                                regex=False,
+                                case=True,
+                                return_chars=False,
                                 return_groups=False
                             )
                             text_with_cords[key].append({"value": v, "cords": data})
                             break
                 else:
                     data = page.search(
-                        value, 
-                        regex=False, 
-                        case=True, 
-                        return_chars=False, 
+                        value,
+                        regex=False,
+                        case=True,
+                        return_chars=False,
                         return_groups=False
                     )
                     text_with_cords[key] = {"value": value, "cords": data}

@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List
 from openai import OpenAI
-import os, json
+import os
+import json
 from enum import Enum
 from decouple import config
 from pdf_utils import get_cords_of_word, extract_invoice_data_pdf
@@ -19,7 +20,6 @@ from PIL import Image
 import requests
 from io import BytesIO
 import pytesseract
-from typing import List
 from docx2pdf import convert
 import win32com.client
 
@@ -27,6 +27,7 @@ import win32com.client
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # Cloudinary configuration
+
 cloudinary.config(
     cloud_name='dcea4t8q2',
     api_key='448278165688468',
