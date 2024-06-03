@@ -94,21 +94,38 @@ def prepare_prompt(text=""):
     }
     prompt = (
         f"{text}\n"
-        "Extract the following data from this invoice text:\n\n"
-        "1. CardCode (vendor id)\n"
-        "2. TaxDate (keep date format as it is in pdf)\n"
-        "3. DocDate (keep date format as it is in pdf)\n"
-        "4. DocDueDate (keep date format as it is in pdf)\n"
-        "5. CardName (vendor name)\n"
-        "6. DiscountPercent\n"
-        "7. DocumentLines (array of line items)\n"
-        "   - ItemCode\n"
-        "   - Quantity\n"
-        "   - TaxCode\n"
-        "   - UnitPrice\n\n"
-        "Return the data in the following JSON format, and ensure the data is accurate and formatted correctly.\n"
-        f"{invoiceData}\n"
-        "Give me strictly in JSON format, don't include any unnecessary headings, newline characters, or \\ before inverted commas."
+        """Extract the Details from this invoice in json format.
+        if data is not available in invoice then give me blank please now give me json data.
+        Please don't give me any other text and explanantion only give me json data.
+        I have a sample of json and the explataion of each term
+        "CardCode": "V10000",
+            "TaxDate": "2024-05-20",
+            "DocDate": "2024-05-21",
+            "DocDueDate": "2024-06-25",
+            "CardName": "Acme Associates",
+            "DiscountPercent": "10.00",
+            "DocumentLines": [
+                {
+                    "ItemCode": "A00001",
+                    "Quantity": "100",
+                    "TaxCode": "TAXON",
+                    "UnitPrice": "50"
+                }
+            ]
+        CardCode :- It means Vendor ID which can always start with "V",
+        TaxDate :- Tax date on an invoice refers to the date on which a delivery is recorded for VAT purposes1. If an invoice is issued within 14 days of the supply date, the invoice date is used as the tax point for VAT purposes.Format For TaxDate should be same that was written in the input.
+        DocDate :- It is a date on which the Doc is created.
+        DocDueDate :- It is a date on which the Invoice should be paid or the doc will expire sometimes it is written in invoice but sometimes it will not written also there can be some text that can hint towards the due date calculation.
+        Card Name :- It is the name of invoice or company name from which the invoice is generated or it can written as heading as well.
+        Discount Price :- A trade discount is a percentage or dollar amount taken off of the item price or the invoice total. For example, the standard price of a product is $20, and the discounted price is $15, or a 10% \\discount is taken off of the invoice total due to a summer sale.
+        DocumentLines :- It is the items list that are in the invoice and it should be the total number of items that are present in invoice.
+        Item Code :- An item code is a numeric representation of a product or service provided by a department to a customer. Each product needs to have a unique item code to ensure appropriate classification, and item codes are essential for proper invoicing.
+        Quantity :- the amount of items that are bought in the invoice each items can have different or same quantity.
+        Tax code :- Tax codes are sequenced collections of one or more tax components that define the tax rates applied on line items and how to calculate the tax amount. Only one tax code can be applied on a line item.
+        Tax codes are used in the enhanced tax engine configuration and also in third-party tax calculation systems. Tax codes in the basic tax configuration simply define the name, description, and the country/region.
+        For line items that are exempted from tax, instead of not applying a tax code, apply a tax code that has a tax component with zero tax rate. The description of this tax code should clearly indicate that the item is exempted from tax.
+        In India Tax code can include IGST,SGST,CGST with the percentage value.
+        UnitPrice :- It is the price of the single unit of an item. it is not total amount."""
     )
 
     return prompt
@@ -129,12 +146,12 @@ def extract_invoice_data(data_type: DataType, text):
         messages = [{"role": "user", "content": [prompt]}]
         for url in text:
             messages[0]["content"].append({"type": "image_url", "image_url": {"url": url}})
-
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
             temperature=0
         )
+        # print("response - image",response.choices[0].message.content)
     else:
         prompt = prepare_prompt(text)
         messages = [{"role": "user", "content": prompt}]
@@ -143,12 +160,9 @@ def extract_invoice_data(data_type: DataType, text):
             messages=messages,
             temperature=0
         )
-
     return response.choices[0].message.content
 
-
-@app.post("/upload/")
-async def upload_file(document: UploadFile = File(...)):
+async def upload_file(document):
     try:
         file_location = STATIC_DIR / document.filename
         with open(file_location, "wb") as f:
@@ -158,8 +172,8 @@ async def upload_file(document: UploadFile = File(...)):
         return JSONResponse(content={"message": "File upload failed", "error": str(e)}, status_code=500)
 
 
-@app.post("/getInvoiceData/image")
-async def get_invoice_data(image_urls: ImageUrls) -> dict:
+# @app.post("/getInvoiceData/image")
+async def get_invoice_data(image_urls) -> dict:
     """
     API endpoint to extract invoice data from image URLs.
 
@@ -172,23 +186,26 @@ async def get_invoice_data(image_urls: ImageUrls) -> dict:
     Raises:
     - HTTPException: If no image URLs are provided or an error occurs during processing.
     """
-    if not image_urls.imageUrl:
+    if not image_urls:
         raise HTTPException(status_code=400, detail="No image URLs provided")
 
     try:
-        result = extract_invoice_data(DataType.IMAGEURL, image_urls.imageUrl)
-        json_response = json.loads(result)
+        result = extract_invoice_data(DataType.IMAGEURL, image_urls)
+        start_index = result.find('{')
+        end_index = result.rfind('}')
+        extracted_text = result[start_index:end_index+1]
+        json_response = json.loads(extracted_text)
         return json_response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/getInvoiceData/text")
-async def get_invoice_data_text(data: TextData) -> list:
+# @app.post("/getInvoiceData/text")
+async def get_invoice_data_text(pdf_path) -> list:
     """
     API endpoint to extract invoice data from text extracted from a PDF.
 
     Args:
-    - data (TextData): The path to the PDF file.
+    - pdf_path : The path to the PDF file.
 
     Returns:
     - list: A list containing the extracted invoice data in JSON format and the coordinates of the extracted words.
@@ -196,7 +213,7 @@ async def get_invoice_data_text(data: TextData) -> list:
     Raises:
     - HTTPException: If no text is provided or an error occurs during processing.
     """
-    pdf_path = data.pdf_path
+    # pdf_path = data.pdf_path
     if not pdf_path:
         raise HTTPException(status_code=400, detail="No text provided")
 
@@ -228,10 +245,9 @@ def upload_image_to_cloudinary(image_np, filename, page_number):
     _, img_encoded = cv2.imencode('.jpg', image_np)
     img_io = BytesIO(img_encoded)
     img_io.name = f'image{page_number+1}.jpg'
-    
     upload_result = cloudinary.uploader.upload(
-        img_io, 
-        folder='output_images', 
+        img_io,
+        folder='output_images',
         public_id=f'{filename}/image{page_number+1}'
     )
     return upload_result['url']
@@ -246,7 +262,6 @@ def process_pdf(pdf_path, output_folder, filename):
         # Set the zoom level
         mat = pymupdf.Matrix(2.0, 2.0)
         pix = page.get_pixmap(matrix=mat)
-        
         # Convert to a numpy array
         image_np = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
 
@@ -258,92 +273,52 @@ def process_pdf(pdf_path, output_folder, filename):
     pdf_document.close()
     return uploaded_image_urls
 
-async def process_image(file, filename):
+async def process_image(filename):
     # image_bytes = await file.read()
     try:
-        image = Image.open(f"input/{filename}")
+        image = Image.open(f"static/{filename}")
     except Exception as e:
         return [], f"Error opening image: {e}"
-    
     if not image:
         return [], "Failed to open image"
     image_np = np.array(image.convert('L'))
-    
-    text = pytesseract.image_to_string(image_np)
-    
-    uploaded_image_urls = [upload_image_to_cloudinary(image_np, filename, 0)]
-    
-    return uploaded_image_urls,text
+    # text = pytesseract.image_to_string(image_np)
+    uploaded_image_urls = upload_image_to_cloudinary(image_np, filename, 0)
+    return [uploaded_image_urls]
 
 
-def convert_doc(file,input_folder,output_folder):
+async def convert_doc(file,input_folder,output_folder):
     input_path = os.path.join(input_folder, file.filename)
     output_filename = f"{os.path.splitext(file.filename)[0]}.pdf"
     output_path = os.path.join(output_folder, output_filename)
 
-    # Save the uploaded file to the input folder
-    file.save(input_path)
-
     # Convert the file to PDF
     convert(input_path, output_path)
-    
-    return output_path
-
-
-# def docx_to_pdf(docx_path, pdf_path):
-#     doc = Document(docx_path)
-#     doc.save(pdf_path)
-
-# def doc_to_pdf(doc_path, pdf_path):
-#     word = win32com.client.Dispatch("Word.Application")
-#     word.Visible = False
-#     doc = word.Documents.Open(doc_path)
-#     doc.SaveAs(pdf_path, FileFormat=17)
-#     doc.Close()
-#     word.Quit()
-
-# def convert_to_pdf_and_return_path(input_path, output_folder):
-#     output_filename = os.path.splitext(os.path.basename(input_path))[0] + ".pdf"
-#     output_path = os.path.join(output_folder, output_filename)
-
-#     if input_path.endswith(".docx"):
-#         docx_to_pdf(input_path, output_path)
-#     elif input_path.endswith(".doc"):
-#         doc_to_pdf(input_path, output_path)
-#     else:
-#         return json.dumps({"error": "Unsupported file format"})
-
-#     return json.dumps({"output_path": output_path})
+    os.remove(input_path)
+    return output_filename
 
 
 @app.post('/process_file')
-async def process_file(file: UploadFile = File(...)):
+async def process_file(file: UploadFile = File(...)) -> List:
     filename = file.filename
-    input_folder = "input"
-    input_file_path = os.path.join(input_folder, filename)
-    with open(input_file_path, "wb") as buffer:
-        buffer.write(await file.read())
+    # await upload_file(file)
 
-    output_folder = "output"
+    output_folder = "static"
     file_ext = filename.split('.')[-1].lower()
-    
     if file_ext == 'pdf':
-        print("pdf")
-        # text=[]
-        # uploaded_image_urls = process_pdf(input_file_path, output_folder, filename)
-        # for url in uploaded_image_urls:
-        #     text.append(extract_text_from_image_url(url))
-        # return jsonify({'text': text})
-        # return jsonify({'urls': uploaded_image_urls})
+        json_data =  await get_invoice_data_text(f"./static/{filename}")
+        return json_data
     elif file_ext in ['doc', 'docx']:
-        path=convert_doc(file,input_folder,output_folder)
-        return {'output_odf_path': path}
+        pdf_fileName = await convert_doc(file,'static',output_folder)
+        json_data =  await get_invoice_data_text(f"./static/{pdf_fileName}")
+        return json_data
         # extract text API
     elif file_ext in ['jpg', 'jpeg', 'png','tif']:
-        text=[]
-        uploaded_image_urls,text = await process_image(file, filename)
-        
-        return {'text': text,'urls':uploaded_image_urls}   
+        # text=[]
+        uploaded_image_urls = await process_image(filename)
+        # print(uploaded_image_urls)
+        json_data = await get_invoice_data(uploaded_image_urls)
+        return [json_data]
     else:
         raise HTTPException(status_code=400, detail='Unsupported file format')
 
@@ -355,7 +330,6 @@ async def delete_folder(folder_name: str):
     try:
         # Delete all resources inside the folder
         cloudinary.api.delete_resources_by_prefix(f'output_images/{folder_name}')
-        
         # Delete the folder itself
         cloudinary.api.delete_folder(f'output_images/{folder_name}')
 
