@@ -1,4 +1,6 @@
-import pdfplumber, os, requests, tempfile, json
+import pdfplumber, pymupdf, cv2
+import numpy as np
+from img_utils import upload_image_to_cloudinary
 
 def extract_invoice_data_pdf(pdf_path):
     """
@@ -13,7 +15,6 @@ def extract_invoice_data_pdf(pdf_path):
     data = ''
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            # Extract text from each page with specific tolerances and densities.
             data += page.extract_text(
                 x_tolerance=3,
                 x_tolerance_ratio=None,
@@ -69,3 +70,37 @@ def get_cords_of_word(gpt_json_data: dict, pdf_path):
                     text_with_cords[key] = {"value": value, "cords": data}
             all_pages_data.append(text_with_cords)
     return all_pages_data
+
+
+def process_pdf(pdf_path, output_folder, filename):
+    """
+    Process a PDF file, extract images from each page, and upload them.
+
+    Args:
+    - pdf_path (str): The file path of the PDF to process.
+    - output_folder (str): The folder to save the uploaded images.
+    - filename (str): The base filename for the images.
+
+    Returns:
+    - list: A list of URLs of the uploaded images.
+    """
+    pdf_document = pymupdf.open(pdf_path)
+    uploaded_image_urls = []
+
+    for page_number in range(len(pdf_document)):
+        page = pdf_document.load_page(page_number)
+
+        # Set the zoom level
+        mat = pymupdf.Matrix(2.0, 2.0)
+        pix = page.get_pixmap(matrix=mat)
+        # Convert to a numpy array
+        image_np = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, pix.n)
+
+        if image_np.shape[2] == 4:
+            image_np = cv2.cvtColor(image_np, cv2.COLOR_BGRA2BGR)
+
+        # Upload the image to Cloudinary
+        uploaded_image_urls.append(upload_image_to_cloudinary(image_np, filename, page_number))
+
+    pdf_document.close()
+    return uploaded_image_urls
