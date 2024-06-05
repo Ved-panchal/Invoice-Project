@@ -12,7 +12,7 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     justify-content: space-between;
     padding: 20px;
     background-color: #f4f4f4;
-    min-height: 100vh;
+    height: 94vh;
 }
 
 /* Content styles */
@@ -23,7 +23,6 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
-    max-height: 100vh;
 }
 
 .content .loader {
@@ -33,6 +32,28 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     height: 100%;
     font-size: 1.2em;
     color: #666;
+    min-height: 100vh;
+}
+
+/* Navbar styles */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #333;
+    color: #fff;
+}
+
+.navbar button {
+    background-color: transparent;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+.navbar h1 {
+    margin: 0;
 }
 
 /* Custom scrollbar styles */

@@ -241,7 +241,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.87)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',

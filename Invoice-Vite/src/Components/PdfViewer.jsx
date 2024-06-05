@@ -19,6 +19,10 @@ const PdfViewer = ({ pdfUrl, fileName , fileCode}) => {
         setNumPages(numPages);
     };
 
+    const handleBack = () => {
+        window.location = '/'; 
+    };
+
     useEffect(() => {
         
         // Function to fetch data from the server
@@ -47,24 +51,31 @@ const PdfViewer = ({ pdfUrl, fileName , fileCode}) => {
 
     // Render the component
     return (
-        <div className="container">
-            <div className="content">
-                {data.length > 0 ? <InvoiceForm invoiceData={data} /> : <div className="loader">Loading...</div>}
+        <div>
+            {/* Navigation bar */}
+            <div className="navbar">
+                <button onClick={handleBack}>Back</button>
+                <h1>Pdf Viewer</h1>
             </div>
-            {img_condition ? (
-                <div className='pdf-view'>
-                    <img src={`http://localhost:5500/static/${fileCode}.JPEG` } alt="" style={{ height: "100%", width: "100%" }} />{
-                    }
+            <div className="container">
+                <div className="content">
+                    {data.length > 0 ? <InvoiceForm invoiceData={data} /> : <div className="loader">Loading...</div>}
                 </div>
-            ) : (
-                <div className="pdf-view">
-                    <Document className="InvoiceView" file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
-                        {Array.from(new Array(numPages), (el, index) => (
-                            <Page key={`page_${index + 1}`} pageNumber={index + 1} />
-                        ))}
-                    </Document>
-                </div>
-            )}
+                {img_condition ? (
+                    <div className='pdf-view'>
+                        <img src={`http://localhost:5500/static/${fileCode}.JPEG` } alt="" style={{ height: "100%", width: "100%" }} />{
+                        }
+                    </div>
+                ) : (
+                    <div className="pdf-view">
+                        <Document className="InvoiceView" file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
+                            {Array.from(new Array(numPages), (el, index) => (
+                                <Page key={`page_${index + 1}`} pageNumber={index + 1} />
+                            ))}
+                        </Document>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

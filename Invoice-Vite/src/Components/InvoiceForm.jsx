@@ -107,27 +107,27 @@ const InvoiceForm = ({ invoiceData }) => {
         <div className="invoice-header">
           <div className="form-group">
             <label htmlFor="CardCode">Vendor ID:</label>
-            <input type="text" id="CardCode" value={CardCode} readOnly />
+            <input type="text" id="CardCode" value={CardCode} />
           </div>
           <div className="form-group">
             <label htmlFor="CardName">Vendor Name:</label>
-            <input type="text" id="CardName" value={CardName} readOnly />
+            <input type="text" id="CardName" value={CardName} />
           </div>
           <div className="form-group">
             <label htmlFor="TaxDate">Tax Date:</label>
-            <input type="text" id="TaxDate" value={TaxDate} readOnly />
+            <input type="text" id="TaxDate" value={TaxDate} />
           </div>
           <div className="form-group">
             <label htmlFor="DocDate">Document Date:</label>
-            <input type="text" id="DocDate" value={DocDate} readOnly />
+            <input type="text" id="DocDate" value={DocDate} />
           </div>
           <div className="form-group">
             <label htmlFor="DocDueDate">Due Date:</label>
-            <input type="text" id="DocDueDate" value={DocDueDate} readOnly />
+            <input type="text" id="DocDueDate" value={DocDueDate} />
           </div>
           <div className="form-group">
             <label htmlFor="DiscountPercent">Discount %:</label>
-            <input type="text" id="DiscountPercent" value={DiscountPercent} readOnly />
+            <input type="text" id="DiscountPercent" value={DiscountPercent} />
           </div>
         </div>
       </header>
@@ -145,10 +145,10 @@ const InvoiceForm = ({ invoiceData }) => {
             <tbody>
               {DocumentLines.map((line, index) => (
                 <tr key={index}>
-                  <td><input type="text" id={index} value={line.ItemCode} readOnly /></td>
-                  <td><input type="text" value={line.Quantity} readOnly /></td>
-                  <td><input type="text" value={line.UnitPrice} readOnly /></td>
-                  <td><input type="text" value={line.TaxCode} readOnly /></td>
+                  <td><input type="text" id={index} value={line.ItemCode} /></td>
+                  <td><input type="text" value={line.Quantity} /></td>
+                  <td><input type="text" value={line.UnitPrice} /></td>
+                  <td><input type="text" value={line.TaxCode} /></td>
                 </tr>
               ))}
             </tbody>
