@@ -1,8 +1,8 @@
-import pdfplumber, pymupdf, cv2
+import pdfplumber, pymupdf, cv2, re
 import numpy as np
 from img_utils import upload_image_to_cloudinary
 
-def extract_invoice_data_pdf(pdf_path):
+def get_pdf_data_from_pdfplumber(pdf_path):
     """
     Extract text data from a PDF file.
 
@@ -104,3 +104,13 @@ def process_pdf(pdf_path, output_folder, filename):
 
     pdf_document.close()
     return uploaded_image_urls
+
+
+def remove_comments_from_json(json_string):
+    start_index = json_string.find('{')
+    end_index = json_string.rfind('}')
+    json_string = json_string[start_index:end_index+1]
+
+    # Use a regular expression to remove comments starting with //
+    json_string = re.sub(r'//.*?\n', '', json_string)
+    return json_string

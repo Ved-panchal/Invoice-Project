@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './CSS/InvoiceForm.css';
 
-const InvoiceForm = ({ invoiceData }) => {
+const InvoiceForm = ({ invoiceData, scale }) => {
   const { CardCode, TaxDate, DocDate, DocDueDate, CardName, DiscountPercent, DocumentLines } = invoiceData[0];
   const data_arr = invoiceData.slice(1, invoiceData.length);
   const [image_canvas, setImage_canvas] = useState([]);
@@ -37,14 +37,14 @@ const InvoiceForm = ({ invoiceData }) => {
             data[id]['cords'].forEach((cord) => {
               ctx.beginPath();
               ctx.strokeStyle = "red";
-              ctx.rect(cord.x0 - 1.5, cord.top - 1.5, (cord.x1 - cord.x0) + 2, (cord.bottom - cord.top) + 2);
+              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 2)*scale, ((cord.bottom - cord.top) + 2)*scale);
               ctx.stroke();
               if (!flag) {
                 let canvas_height = current_canvas.getBoundingClientRect().height;
                 let document_height = current_canvas.height;
-                let cord_document_top = (document_height * cord.top) / canvas_height;
+                let cord_document_top = ((document_height * cord.top) / canvas_height)*scale;
 
-                document.querySelector('div.react-pdf__Document.InvoiceView').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
+                document.querySelector('div.pdf-view').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
                 flag = true;
               }
             });
@@ -60,14 +60,14 @@ const InvoiceForm = ({ invoiceData }) => {
             data['DocumentLines'][id]['cords'].forEach((cord) => {
               ctx.beginPath();
               ctx.strokeStyle = "red";
-              ctx.rect(cord.x0 - 1.5, cord.top - 1.5, (cord.x1 - cord.x0) + 2, (cord.bottom - cord.top) + 2);
+              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 2)*scale, ((cord.bottom - cord.top) + 2)*scale);
               ctx.stroke();
               if (!flag) {
                 let canvas_height = current_canvas.getBoundingClientRect().height;
                 let document_height = current_canvas.height;
-                let cord_document_top = (document_height * cord.top) / canvas_height;
+                let cord_document_top = ((document_height * cord.top) / canvas_height)*scale;
 
-                document.querySelector('div.react-pdf__Document.InvoiceView').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
+                document.querySelector('div.pdf-view').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
                 flag = true;
               }
             });

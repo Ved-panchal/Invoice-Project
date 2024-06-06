@@ -7,6 +7,7 @@ import os, json, ssl, cloudinary, cloudinary.uploader, pymongo
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
+from together import Together
 from conversion import convert_image, convert_doc
 from extraction import get_invoice_data, get_invoice_data_text
 from img_utils import process_image
@@ -48,9 +49,11 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Load your OpenAI API key from environment variable
-client = OpenAI(
-    api_key = config('OPENAI_API_KEY')
-)
+# client = OpenAI(
+#     api_key = config('OPENAI_API_KEY')
+# )
+
+client = Together(api_key=config("TOGETHER_API_KEY"))
 
 @app.get("/hello")
 def hello():

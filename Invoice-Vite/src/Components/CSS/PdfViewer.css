@@ -145,20 +145,9 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-}
-
-.InvoiceView {
     width: 100%;
     height: 100vh;
     overflow: auto;
-}
-
-.InvoiceView canvas {
-    width: 100% !important;
-    height: auto !important;
-    display: block;
-    margin: 0 auto;
 }
 
 /* Hide text layer */

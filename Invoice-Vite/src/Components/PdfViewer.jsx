@@ -1,84 +1,91 @@
-import React, { useEffect, useState } from 'react';
-import { Document, Page } from 'react-pdf';
-import { pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import "./CSS/PdfViewer.css";
-import InvoiceForm from './InvoiceForm';
+import React, { useEffect, useRef, useState } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
+import 'pdfjs-dist/web/pdf_viewer.css';
 import axios from 'axios';
+import InvoiceForm from './InvoiceForm';
+import './CSS/PdfViewer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
-const PdfViewer = ({ pdfUrl, fileName , fileCode}) => {
-    // State variables to manage PDF viewing
-    const [numPages, setNumPages] = useState(null); // Total number of pages in the PDF
-    const [data, setData] = useState([]); // Data fetched from the server
-    const [img_condition, setImage_condition] = useState(false); // Condition to render an image instead of a PDF
+const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
+  const canvasContainerRef = useRef(null);
+  const [numPages, setNumPages] = useState(0);
+  const [data, setData] = useState([]);
+  const [imgCondition, setImageCondition] = useState(false);
+  const scale_val = 1.92;
 
-    // Callback function triggered when the PDF document is loaded successfully
-    const onDocumentLoadSuccess = ({ numPages }) => {
-        setNumPages(numPages);
+  const handleBack = () => {
+    window.location = '/';
+  };
+
+  useEffect(() => {
+    const getData = async () => {
+      if (fileCode.substring(fileCode.length - 1) === '1') {
+        setImageCondition(true);
+      }
+      try {
+        const response = await axios.get(`http://localhost:5500/invoice/get_data/${fileName}`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        setData(response.data['data']);
+      } catch (error) {
+        console.log('Error getting data', error);
+      }
     };
 
-    const handleBack = () => {
-        window.location = '/'; 
-    };
+    if (data.length === 0) {
+      getData();
+    }
 
-    useEffect(() => {
-        
-        // Function to fetch data from the server
-        const getData = async () => {
-            console.log('hello');
-            // Checking if the extension bit is set 
-            if (fileCode.substring(fileCode.length - 1) === '1') {
-                setImage_condition(true); // If the file is an image, set the image condition to true
-            }
-            try {
-                const response = await axios.get(`http://localhost:5500/invoice/get_data/${fileName}`, {
-                    headers: {
-                        "Content-Type": 'application/json'
-                    }
-                });
-                setData(response.data["data"]);
-                console.log('babu',response)
-            } catch (error) {
-                console.log("error getting data", error);
-            }
-        };
-        if(data.length === 0){
-             getData(); // Call the function to fetch data when the component mounts
+    if (!imgCondition) {
+      const loadingTask = pdfjsLib.getDocument(pdfUrl);
+      loadingTask.promise.then((pdf) => {
+        setNumPages(pdf.numPages);
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          pdf.getPage(pageNumber).then((page) => {
+            const viewport = page.getViewport({ scale: scale_val });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+              canvasContext: context,
+              viewport: viewport,
+            };
+
+            canvasContainerRef.current.appendChild(canvas);
+
+            page.render(renderContext);
+          });
         }
-    }, []); // Empty dependency array ensures this runs only once
+      });
+    }
+  }, [pdfUrl, fileCode, imgCondition, data.length]);
 
-    // Render the component
-    return (
-        <div>
-            {/* Navigation bar */}
-            <div className="navbar">
-                <button onClick={handleBack}>Back</button>
-                <h1>Pdf Viewer</h1>
-            </div>
-            <div className="container">
-                <div className="content">
-                    {data.length > 0 ? <InvoiceForm invoiceData={data} /> : <div className="loader">Loading...</div>}
-                </div>
-                {img_condition ? (
-                    <div className='pdf-view'>
-                        <img src={`http://localhost:5500/static/${fileCode}.JPEG` } alt="" style={{ height: "100%", width: "100%" }} />{
-                        }
-                    </div>
-                ) : (
-                    <div className="pdf-view">
-                        <Document className="InvoiceView" file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
-                            {Array.from(new Array(numPages), (el, index) => (
-                                <Page key={`page_${index + 1}`} pageNumber={index + 1} />
-                            ))}
-                        </Document>
-                    </div>
-                )}
-            </div>
+  return (
+    <div>
+      <div className="navbar">
+        <button onClick={handleBack}>Back</button>
+        <h1>Pdf Viewer</h1>
+      </div>
+      <div className="container">
+        <div className="content">
+          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val}/> : <div className="loader">Loading...</div>}
         </div>
-    );
+        {imgCondition ? (
+          <div className="pdf-view">
+            <img src={`http://localhost:5500/static/${fileCode}.JPEG`} alt="" style={{ height: '100%', width: '100%' }} />
+          </div>
+        ) : (
+          <div className="pdf-view" ref={canvasContainerRef}></div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default PdfViewer;
-
