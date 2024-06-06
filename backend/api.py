@@ -15,11 +15,15 @@ from img_utils import process_image
 # Mongo variables
 uri = config("MONGO_URI")
 db_name = config("MONGO_DB_NAME")
-collection_name = config("COLLECTION_NAME")
+user_collection_name = config("USER_COLLECTION_NAME")
+pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
+user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
 
 mongo_client = pymongo.MongoClient(uri)
 db = mongo_client[db_name]
-handler = db[collection_name]
+users_collection = db[user_collection_name]
+pdf_data_collection = db[pdf_data_collection_name]
+user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -112,11 +116,34 @@ async def delete_folder(folder_name: str):
     
 @app.get('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str):
-    data = handler.find_one({"_id": ObjectId(invoice_id)})
+    data = pdf_data_collection.find_one({"_id": ObjectId(invoice_id)})
 
     if data:
         data = convert_objectid(data)
     return data
+
+@app.post('/get_pdfs')
+def get_all_pdf_data_from_userid(payload: dict):
+    user_id = int(payload.get("userId"))
+    response = []
+    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0}).sort({"_id": -1}).limit(5):
+        response.append(record)
+    print(response)
+    return response
+
+@app.post('/insert_mapping_data')
+def insert_mapping_data(payload: dict):
+    try:
+        inserted_id = user_pdf_mapping_collection.insert_one(payload)
+        if not inserted_id:
+            print('Mapping data insertion error')
+            raise HTTPException(status_code=400, detail="Mapping data insertion error")
+        return inserted_id
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 def convert_objectid(doc):
     """
@@ -138,7 +165,7 @@ async def process_file(filename: str) -> str:
     if file_ext == 'pdf':
         json_data =  await get_invoice_data_text(client, f"./static/{filename}")
         data = {'data' : json_data}
-        result = handler.insert_one(data)
+        result = pdf_data_collection.insert_one(data)
         if result:
             result = str(result.inserted_id) + "0"
         else:
@@ -150,7 +177,7 @@ async def process_file(filename: str) -> str:
             (uploaded_image_urls, _) = await process_image(filename)
             json_data = await get_invoice_data(client, uploaded_image_urls)
             data = {'data' : [json_data]}
-            result = handler.insert_one(data)
+            result = pdf_data_collection.insert_one(data)
             if result:
                 result = str(result.inserted_id) + "1"
             else:
