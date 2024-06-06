@@ -1,7 +1,6 @@
-import axios from 'axios';
 import React, { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
-import Loader from './Loader';
+import { useNavigate } from 'react-router-dom';
 
 function UploadDocumentPage() {
   const [files, setFiles] = useState([]);
@@ -9,12 +8,8 @@ function UploadDocumentPage() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('idle');
   const xhrRef = useRef(null);
+  const navigate = useNavigate();
 
-  // const onDrop = useCallback((acceptedFiles) => {
-  //   setFile(acceptedFiles[0]);
-  //   setStatus('idle');
-  //   setProgress(0);
-  // }, []);
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
     setStatus('idle');
@@ -23,47 +18,9 @@ function UploadDocumentPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: '.pdf, .jpg, .jpeg, .png, .docx'
+    accept: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg'],
+    multiple: true,
   });
-
-  // const upload_pdf = async (file) => {
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('document', file);
-  //     const response = await axios.post('http://localhost:5500/upload', formData, {
-  //       headers: {
-  //         'Content-Type': 'multipart/form-data',
-  //       },
-  //     });
-  //     return response;
-  //   } catch (error) {
-  //     console.log('error uploading', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handleSubmit = async (event) => {
-  //   event.preventDefault();
-
-  //   if (file) {
-  //     setLoading(true);
-  //     setStatus('uploading');
-  //     try {
-  //       let response = await upload_pdf(file);
-  //       console.log(response.data.file_id)
-  //       setLoading(false);
-  //       setStatus('completed');
-  //       window.location.href = `/my-documents/${response.data.file_id}`;
-  //     } catch (error) {
-  //       console.error('Error uploading document:', error);
-  //       setLoading(false);
-  //       setStatus('failed');
-  //     }
-  //   } else {
-  //     console.error('No file selected.');
-  //   }
-  // };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -76,6 +33,36 @@ function UploadDocumentPage() {
           formData.append(`document${index + 1}`, file);
         });
 
+        const xhr = new XMLHttpRequest();
+        xhrRef.current = xhr;
+        xhr.open('POST', 'http://localhost:5500/api/extract', true);
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100;
+            setProgress(percentComplete);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            navigate('/invoice-details', { state: { invoiceData: response } });
+            setStatus('completed');
+          } else {
+            console.error('Failed to upload documents.');
+            setStatus('failed');
+          }
+          setLoading(false);
+        };
+
+        xhr.onerror = () => {
+          console.error('Error uploading documents.');
+          setLoading(false);
+          setStatus('failed');
+        };
+
+        xhr.send(formData);
       } catch (error) {
         console.error('Error uploading documents:', error);
         setLoading(false);
@@ -83,6 +70,14 @@ function UploadDocumentPage() {
       }
     } else {
       console.error('No files selected.');
+    }
+  };
+
+  const handleCancel = () => {
+    if (xhrRef.current) {
+      xhrRef.current.abort();
+      setLoading(false);
+      setStatus('failed');
     }
   };
 
@@ -111,7 +106,7 @@ function UploadDocumentPage() {
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
       <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={handleSubmit} style={styles.form}>
           <div {...getRootProps({ style: styles.dropzone })}>
             <input {...getInputProps()} />
             {isDragActive ? (
@@ -135,6 +130,11 @@ function UploadDocumentPage() {
           <button type="submit" disabled={files.length === 0 || loading} style={styles.button}>
             {loading ? 'Uploading...' : 'Upload'}
           </button>
+          {loading && (
+            <button type="button" onClick={handleCancel} style={styles.cancelButton}>
+              Cancel
+            </button>
+          )}
           <div style={{ ...styles.status, ...getStatusStyle() }}>
             {status === 'uploading' && 'Uploading...'}
             {status === 'processing' && 'Processing...'}
@@ -148,7 +148,6 @@ function UploadDocumentPage() {
           )}
         </form>
       </div>
-      {loading && <div style={styles.overlay}><Loader/></div>}
     </div>
   );
 }
@@ -165,7 +164,7 @@ const styles = {
   },
   heading: {
     marginBottom: '20px',
-    fontSize: '50px',
+    fontSize: '2em',
   },
   container: {
     display: 'flex',
@@ -181,10 +180,12 @@ const styles = {
     alignItems: 'center',
     width: '100%',
     maxWidth: '400px',
+    padding: '10px',
   },
   dropzone: {
-    width: '300%',
-    padding: '160px',
+    width: '100%',
+    height: '200px',
+    padding: '40px',
     borderWidth: '2px',
     borderColor: '#cccccc',
     borderStyle: 'dashed',
@@ -194,6 +195,7 @@ const styles = {
     textAlign: 'center',
     cursor: 'pointer',
     marginBottom: '10px',
+    transition: 'all 0.2s ease-in-out',
   },
   fileDetailsContainer: {
     width: '100%',
@@ -224,6 +226,7 @@ const styles = {
     padding: '10px 20px',
     fontSize: '16px',
     cursor: 'pointer',
+    transition: 'background-color 0.3s ease',
   },
   cancelButton: {
     marginTop: '10px',
@@ -232,6 +235,7 @@ const styles = {
     cursor: 'pointer',
     backgroundColor: '#dc3545',
     color: '#fff',
+    transition: 'background-color 0.3s ease',
   },
   progressContainer: {
     width: '100%',
@@ -260,18 +264,6 @@ const styles = {
   },
   failed: {
     color: '#dc3545',
-  },
-  overlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 9999,
   },
 };
 
