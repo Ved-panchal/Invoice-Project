@@ -52,7 +52,7 @@ client = OpenAI(
     api_key = config('OPENAI_API_KEY')
 )
 
-@app.route("/hello", methods=["GET"])
+@app.get("/hello")
 def hello():
     """
     Simple API endpoint to test if the server is running.

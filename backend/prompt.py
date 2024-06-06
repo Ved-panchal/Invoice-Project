@@ -9,41 +9,27 @@ def prepare_prompt(text=""):
     - str: The prepared prompt with the given text and instructions for data extraction.
     """
     invoiceData = {
-        "CardCode": "V10000",
-        "TaxDate": "2024-05-20",
-        "DocDate": "2024-05-21",
-        "DocDueDate": "2024-06-25",
-        "CardName": "Acme Associates",
-        "DiscountPercent": "10.00",
+        "CardCode": "",
+        "TaxDate": "",
+        "DocDate": "",
+        "DocDueDate": "",
+        "CardName": "",
+        "DiscountPercent": "",
         "DocumentLines": [
             {
-                "ItemCode": "A00001",
-                "Quantity": "100",
-                "TaxCode": "TAXON",
-                "UnitPrice": "50"
+                "ItemCode": "",
+                "Quantity": "",
+                "TaxCode": "",
+                "UnitPrice": ""
             }
         ]
     }
-    prompt = (
+    prompt1 = (
         f"{text}\n"
         """Extract the Details from this invoice in json format.
-        if data is not available in invoice then give me blank please now give me json data.
-        Please don't give me any other text and explanantion only give me json data.
+        if data is not available in invoice then give me blank.
+        don't give me any other text and explanantion only give me json data.
         I have a sample of json and the explataion of each term
-        "CardCode": "V10000",
-            "TaxDate": "2024-05-20",
-            "DocDate": "2024-05-21",
-            "DocDueDate": "2024-06-25",
-            "CardName": "Acme Associates",
-            "DiscountPercent": "10.00",
-            "DocumentLines": [
-                {
-                    "ItemCode": "A00001",
-                    "Quantity": "100",
-                    "TaxCode": "TAXON",
-                    "UnitPrice": "50"
-                }
-            ]
         CardCode :- It means Vendor ID which can always start with "V", it is different from Customer and if it is empty give me empty string,
         TaxDate :- Tax date on an invoice refers to the date on which a delivery is recorded for VAT purposes1. If an invoice is issued within 14 days of the supply date, the invoice date is used as the tax point for VAT purposes.Format For TaxDate should be same that was written in the input text.
         DocDate :- It is a date on which the Doc is created.
@@ -58,7 +44,43 @@ def prepare_prompt(text=""):
         For line items that are exempted from tax, instead of not applying a tax code, apply a tax code that has a tax component with zero tax rate. The description of this tax code should clearly indicate that the item is exempted from tax.
         In India Tax code can include IGST,SGST,CGST with the percentage value.
         UnitPrice :- It is the price of the single unit of an item. it is not total amount.
-        Special instruction for the date format as it is provided in text PLEASE Don.t reformat to any other format.
+        Special instruction for the date format as it is provided in text, Don't reformat to any other format.
+        DONT GIVE ME ANY COMMENTS.
         """
+        f"{invoiceData}"
     )
-    return prompt
+
+    prompt2 = (
+        f"{text}\n"
+        """Extract the details from this invoice in JSON format. If data is not available, provide an empty string.
+            {
+                "CardCode": "",
+                "TaxDate": "",
+                "DocDate": "",
+                "DocDueDate": "",
+                "CardName": "",
+                "DiscountPrice": "",
+                "DocumentLines": [
+                    "ItemCode": "",
+                    "Quantity": "",
+                    "TaxCode": "",
+                    "UnitPrice": ""
+                ]
+            }
+            Descriptions:
+            - CardCode: Vendor ID, starts with "V".
+            - TaxDate: Date for VAT purposes.
+            - DocDate: Creation date of the document.
+            - DocDueDate: Payment due date.
+            - CardName: Invoice or company name.
+            - DiscountPrice: Discount on item or invoice total.
+            - DocumentLines: List of items in the invoice.
+            - ItemCode: Unique numeric representation of a product/service.
+            - Quantity: Number of items bought.
+            - TaxCode: Defines tax rates and calculations.
+            - UnitPrice: Price per unit of an item.
+            Keep date format as in input text. NO COMMENTS."""
+        f"{invoiceData}"
+    )
+    
+    return prompt2
