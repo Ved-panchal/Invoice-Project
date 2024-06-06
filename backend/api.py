@@ -126,7 +126,7 @@ def get_data_from_mongo(invoice_id: str):
 def get_all_pdf_data_from_userid(payload: dict):
     user_id = int(payload.get("userId"))
     response = []
-    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0}).sort({"_id": -1}).limit(5):
+    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort({"_id": -1}).limit(5):
         response.append(record)
     print(response)
     return response
