@@ -32,6 +32,7 @@ def get_data_from_gpt(data_type: DataType, client, text):
         response = client.chat.completions.create(
             # model="gpt-3.5-turbo",
             model="Qwen/Qwen1.5-110B-Chat",
+            messages=messages,
             temperature=0
         )
     return response.choices[0].message.content
