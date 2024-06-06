@@ -128,8 +128,8 @@ def get_all_pdf_data_from_userid(payload: dict):
     response = []
     for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort({"_id": -1}).limit(5):
         response.append(record)
-    print(response)
-    return response
+    transformed_data = [item["pdfData"] for item in response]
+    return transformed_data
 
 @app.post('/insert_mapping_data')
 def insert_mapping_data(payload: dict):
