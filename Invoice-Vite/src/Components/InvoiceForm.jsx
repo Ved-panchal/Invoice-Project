@@ -37,7 +37,8 @@ const InvoiceForm = ({ invoiceData, scale }) => {
             data[id]['cords'].forEach((cord) => {
               ctx.beginPath();
               ctx.strokeStyle = "red";
-              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 2)*scale, ((cord.bottom - cord.top) + 2)*scale);
+              // ctx.rect((cord.x0*scale)-1.5, (cord.top *scale)- 1, ((cord.x1 - cord.x0 + 4)*scale ), ((cord.bottom - cord.top)*scale+1));
+              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 3)*scale, ((cord.bottom - cord.top) + 2)*scale);
               ctx.stroke();
               if (!flag) {
                 let canvas_height = current_canvas.getBoundingClientRect().height;
@@ -60,13 +61,12 @@ const InvoiceForm = ({ invoiceData, scale }) => {
             data['DocumentLines'][id]['cords'].forEach((cord) => {
               ctx.beginPath();
               ctx.strokeStyle = "red";
-              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 2)*scale, ((cord.bottom - cord.top) + 2)*scale);
+              ctx.rect((cord.x0 - 1.5)*scale, (cord.top - 1.5)*scale, ((cord.x1 - cord.x0) + 3)*scale, ((cord.bottom - cord.top) + 2)*scale);
               ctx.stroke();
               if (!flag) {
                 let canvas_height = current_canvas.getBoundingClientRect().height;
                 let document_height = current_canvas.height;
                 let cord_document_top = ((document_height * cord.top) / canvas_height)*scale;
-
                 document.querySelector('div.pdf-view').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
                 flag = true;
               }
