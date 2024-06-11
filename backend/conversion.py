@@ -27,7 +27,7 @@ async def convert_image(filename, output_format='JPEG') -> str:
         return ''
     
 
-async def convert_doc(filename):
+def convert_doc(filename):
     """
     Convert a document file to PDF format.
 

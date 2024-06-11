@@ -1,29 +1,34 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from openai import OpenAI
-import os, json, ssl, cloudinary, cloudinary.uploader, pymongo
+import os, ssl, cloudinary, cloudinary.uploader
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
-from together import Together
 from conversion import convert_image, convert_doc
-from extraction import get_invoice_data, get_invoice_data_text
-from img_utils import process_image
+from extraction import process_file
+from rpc import RpcClient
+from database_collections import MongoDBConnection
 
-# Mongo variables
-uri = config("MONGO_URI")
-db_name = config("MONGO_DB_NAME")
-user_collection_name = config("USER_COLLECTION_NAME")
-pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
-user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
+# # Mongo variables
+# uri = config("MONGO_URI")
+# db_name = config("MONGO_DB_NAME")
+# user_collection_name = config("USER_COLLECTION_NAME")
+# pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
+# user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
 
-mongo_client = pymongo.MongoClient(uri)
-db = mongo_client[db_name]
-users_collection = db[user_collection_name]
-pdf_data_collection = db[pdf_data_collection_name]
-user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
+# mongo_client = pymongo.MongoClient(uri)
+# db = mongo_client[db_name]
+# users_collection = db[user_collection_name]
+# pdf_data_collection = db[pdf_data_collection_name]
+# user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
+
+mongo_conn = MongoDBConnection()
+# Access collections
+users_collection = mongo_conn.get_users_collection()
+pdf_data_collection = mongo_conn.get_pdf_data_collection()
+user_pdf_mapping_collection = mongo_conn.get_user_pdf_mapping_collection()
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -52,13 +57,6 @@ app.add_middleware(
 # Static file hosting
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Load your OpenAI API key from environment variable
-# client = OpenAI(
-#     api_key = config('OPENAI_API_KEY')
-# )
-
-client = Together(api_key=config("TOGETHER_API_KEY"))
-
 @app.get("/hello")
 def hello():
     """
@@ -71,16 +69,16 @@ def hello():
 
 
 @app.post("/uploadFiles/{user_id}")
-async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
-    response = []
+async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...)):
+    response, filenames = [], []
     try:
-        user_dir = STATIC_DIR / str(user_id)
+        user_dir = STATIC_DIR / user_id
         if not user_dir.exists():
             os.makedirs(user_dir)
 
         for document in documents:
             pdf_data = {
-                "userId":user_id,
+                "userId": int(user_id),
                 "pdfData":{
                     "pdfId":"",
                     "pdfName":document.filename,
@@ -91,46 +89,36 @@ async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
             pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
             response.append(pdf_data)
             file_ext = document.filename.split('.')[-1].lower()
-            newFileName = f'{pdf_data["_id"]}.{file_ext}'
-            file_location = user_dir / newFileName
+            new_file_name = f'{pdf_data["_id"]}.{file_ext}'
+            filenames.append(new_file_name)
+            file_location = user_dir / new_file_name
             with open(file_location, "wb") as f:
                 f.write(document.file.read())
+
+        # Schedule the upload_files_to_queue task as a background task
+        background_tasks.add_task(upload_files_to_queue, filenames, user_id)
+
 
     except Exception as e:
         print("Error uploading files:", e)
         return {"success": False, "error": str(e)}
     return {"success": True, "result": response}
 
-
-@app.post("/upload")
-async def upload_file(document: UploadFile = File(...)):
+def upload_files_to_queue(filenames: list[str], user_id: str):
     try:
-        file_location = STATIC_DIR / document.filename
-        with open(file_location, "wb") as f:
-            f.write(document.file.read())
+        # for filename in filenames:
+        #     file_id = await store_pdf_data(user_id, filename)
 
-        file_ext = document.filename.split('.')[-1].lower()
-        filename = document.filename
-        if file_ext in ['doc', 'docx']:
-            filename = await convert_doc(filename)
+        rpc_client = RpcClient()
+        rpc_client.call({
+            'user_id': user_id,
+            'pdf_paths': filenames
+        })
 
-        elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
-            filename = await convert_image(filename)
-
-        file_id = await process_file(filename)
-        file_ext = filename.split('.')[-1]
-        file_location = STATIC_DIR / filename
-
-        # Construct new filename using file_id and the original extension
-        new_filename = f"{file_id}.{file_ext}"
-        new_file_location = STATIC_DIR / new_filename
-
-        # Rename the file
-        os.rename(file_location, new_file_location)
-
-        return JSONResponse(content={"message": "File uploaded successfully", "file_id": file_id}, status_code=200)
+        print("message: ", "File uploaded successfully")
+        # return JSONResponse(content={"message": "File uploaded successfully"})
     except Exception as e:
-        return JSONResponse(content={"message": "File upload failed", "error": str(e)}, status_code=500)
+        return JSONResponse(content={"message": "File upload failed", "error": str(e)})
 
 @app.post('/delete_folder')
 async def delete_folder(folder_name: str):
@@ -189,36 +177,6 @@ def convert_objectid(doc):
         return str(doc)
     else:
         return doc
-
-async def process_file(filename: str) -> str:
-    # await upload_file(file)
-    # filename = payload.get("filename")
-    file_ext = filename.split('.')[-1].lower()
-    if file_ext == 'pdf':
-        json_data =  await get_invoice_data_text(client, f"./static/{filename}")
-        data = {'data' : json_data}
-        result = pdf_data_collection.insert_one(data)
-        if result:
-            result = str(result.inserted_id) + "0"
-        else:
-            raise HTTPException(status_code=400, detail="Database insertion error")
-        return result
-
-    elif file_ext == "jpeg":
-        if filename:
-            (uploaded_image_urls, _) = await process_image(filename)
-            json_data = await get_invoice_data(client, uploaded_image_urls)
-            data = {'data' : [json_data]}
-            result = pdf_data_collection.insert_one(data)
-            if result:
-                result = str(result.inserted_id) + "1"
-            else:
-                raise HTTPException(status_code=400, detail="Database insertion error")
-            return result
-        else:
-            raise HTTPException(status_code=400, detail="Can not convert image to JPEG")
-    else:
-        raise HTTPException(status_code=400, detail='Unsupported file format')
 
 
 if __name__ == "__main__":
