@@ -79,18 +79,23 @@ async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
             os.makedirs(user_dir)
 
         for document in documents:
-            file_location = user_dir / document.filename
-            with open(file_location, "wb") as f:
-                f.write(document.file.read())
-            result = user_pdf_mapping_collection.insert_one({
+            pdf_data = {
                 "userId":user_id,
                 "pdfData":{
                     "pdfId":"",
                     "pdfName":document.filename,
                     "pdfStatus":"Pending"
                 }
-            })
-            response.append(str(result.inserted_id)) if result else response.append("")
+            }
+            result = user_pdf_mapping_collection.insert_one(pdf_data)
+            pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
+            response.append(pdf_data)
+            file_ext = document.filename.split('.')[-1].lower()
+            newFileName = f'{pdf_data["_id"]}.{file_ext}'
+            file_location = user_dir / newFileName
+            with open(file_location, "wb") as f:
+                f.write(document.file.read())
+
     except Exception as e:
         print("Error uploading files:", e)
         return {"success": False, "error": str(e)}
@@ -150,9 +155,8 @@ def get_data_from_mongo(invoice_id: str):
         data = convert_objectid(data)
     return data
 
-@app.post('/get_pdfs')
-def get_all_pdf_data_from_userid(payload: dict):
-    user_id = int(payload.get("userId"))
+@app.get('/get_pdfs/{user_id}')
+def get_all_pdf_data_from_userid(user_id: int):
     response = []
     for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort({"_id": -1}).limit(5):
         response.append(record)

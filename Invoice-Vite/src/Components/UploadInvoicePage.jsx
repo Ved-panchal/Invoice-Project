@@ -37,12 +37,13 @@ function UploadDocumentPage() {
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append('documents', file));
-      const response = await axios.post('http://localhost:5500/uploadFiles/1', formData, {
+      const response = await axios.post('http://localhost:5500/uploadFiles/2', formData, { // 2 is for user id when login is created then it should be replaced
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response;
+      console.log("response", response)
+      return response.data.result;
     } catch (error) {
       console.log('error uploading', error);
       throw error;
@@ -85,8 +86,13 @@ function UploadDocumentPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (files.length > 0) {
-      upload_pdf(files);
-      // setLoading(true);
+      setLoading(true);
+      let newFiles = await upload_pdf(files);
+      newFiles = newFiles.map((newFile) => {
+        return newFile.pdfData;
+      })
+      console.log("newFiles", newFiles)
+      setUploadedFiles((prevUploadedFiles) => [...newFiles, ...prevUploadedFiles]);
       // let currstate = setInitialFilesState(files);
       // try {
       //   for (let index = 0; index < files.length; index++) {
@@ -94,7 +100,7 @@ function UploadDocumentPage() {
       //     currstate[index] = updatedFile;
       //     setUploadedFiles([...currstate]);
       //   }
-      //   setLoading(false);
+      setLoading(false);
       // } catch (error) {
       //   console.error("Error uploading documents:", error);
       //   setLoading(false);
@@ -110,9 +116,7 @@ function UploadDocumentPage() {
 
   useEffect(() => {
     const get_pdfs = async () => {
-      let response = await axios.post("http://localhost:5500/get_pdfs", {
-        userId: 1,
-      });
+      let response = await axios.get("http://localhost:5500/get_pdfs/2");
       let data = response.data;
       setUploadedFiles(data);
     };
