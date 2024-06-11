@@ -69,6 +69,34 @@ def hello():
     """
     return "hello"
 
+
+@app.post("/uploadFiles/{user_id}")
+async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
+    response = []
+    try:
+        user_dir = STATIC_DIR / str(user_id)
+        if not user_dir.exists():
+            os.makedirs(user_dir)
+
+        for document in documents:
+            file_location = user_dir / document.filename
+            with open(file_location, "wb") as f:
+                f.write(document.file.read())
+            result = user_pdf_mapping_collection.insert_one({
+                "userId":user_id,
+                "pdfData":{
+                    "pdfId":"",
+                    "pdfName":document.filename,
+                    "pdfStatus":"Pending"
+                }
+            })
+            response.append(str(result.inserted_id)) if result else response.append("")
+    except Exception as e:
+        print("Error uploading files:", e)
+        return {"success": False, "error": str(e)}
+    return {"success": True, "result": response}
+
+
 @app.post("/upload")
 async def upload_file(document: UploadFile = File(...)):
     try:

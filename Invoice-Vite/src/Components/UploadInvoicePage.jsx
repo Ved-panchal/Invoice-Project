@@ -1,8 +1,6 @@
 import axios from "axios";
 import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import { Writable } from 'stream';
-import Loader from "./Loader";
 
 function UploadDocumentPage() {
   const [files, setFiles] = useState([]);
@@ -18,16 +16,32 @@ function UploadDocumentPage() {
     accept: ".pdf, .jpg, .jpeg, .png, .docx",
   });
 
-  const upload_pdf = async (file) => {
+  // const upload_pdf = async (file) => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('document', file);
+  // .// const response = await axios.get('http://localhost:5500/stream');
+  //     const response = await axios.post('http://localhost:5500/upload', formData, {
+  //       headers: {
+  //         'Content-Type': 'multipart/form-data',
+  //       },
+  //     });
+  //     return response;
+  //   } catch (error) {
+  //     console.log('error uploading', error);
+  //     throw error;
+  //   }
+  // };
+
+  const upload_pdf = async (files) => {
     try {
       const formData = new FormData();
-      formData.append('document', file);
-      // const response = await axios.get('http://localhost:5500/stream');
-      // const response = await axios.post('http://localhost:5500/upload', formData, {
-      //   headers: {
-      //     'Content-Type': 'multipart/form-data',
-      //   },
-      // });
+      files.forEach((file) => formData.append('documents', file));
+      const response = await axios.post('http://localhost:5500/uploadFiles/1', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response;
     } catch (error) {
       console.log('error uploading', error);
@@ -35,56 +49,56 @@ function UploadDocumentPage() {
     }
   };
 
-  const setInitialFilesState = (files) => {
-    let prevUploadedFiles = uploadedFiles;
-    let newFiles = files.map((file) => ({
-      pdfId: "Loading...",
-      pdfName: file.name,
-      pdfStatus: 'Pending'
-    }));
-    setUploadedFiles([...newFiles, ...prevUploadedFiles]);
-    return [...newFiles, ...prevUploadedFiles];
-  };
-  
+  // const setInitialFilesState = (files) => {
+  //   let prevUploadedFiles = uploadedFiles;
+  //   let newFiles = files.map((file) => ({
+  //     pdfId: "Loading...",
+  //     pdfName: file.name,
+  //     pdfStatus: 'Pending'
+  //   }));
+  //   setUploadedFiles([...newFiles, ...prevUploadedFiles]);
+  //   return [...newFiles, ...prevUploadedFiles];
+  // };
 
 
-  const getApiResponse = async (file) => {
-    try {
-      let response = await upload_pdf(file);
-      // const fileId = response.data.file_id;
-      const fileId = response.data;
-      return {
-        pdfStatus: 'Completed',
-        pdfId: fileId,
-        pdfName: file.name
-      };
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      return {
-        pdfStatus: 'Exception',
-        pdfId: 'cannot be extracted',
-        pdfName: file.name
-      };
-    }
-  };
+
+  // const getApiResponse = async (file) => {
+  //   try {
+  //     let response = await upload_pdf(file);
+  //     const fileId = response.data.file_id;
+  //     return {
+  //       pdfStatus: 'Completed',
+  //       pdfId: fileId,
+  //       pdfName: file.name
+  //     };
+  //   } catch (error) {
+  //     console.error('Error uploading document:', error);
+  //     return {
+  //       pdfStatus: 'Exception',
+  //       pdfId: 'cannot be extracted',
+  //       pdfName: file.name
+  //     };
+  //   }
+  // };
   
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (files.length > 0) {
-      setLoading(true);
-      let currstate = setInitialFilesState(files);
-      try {
-        for (let index = 0; index < files.length; index++) {
-          const updatedFile = await getApiResponse(files[index]);
-          currstate[index] = updatedFile;
-          setUploadedFiles([...currstate]);
-        }
-        setLoading(false);
-      } catch (error) {
-        console.error("Error uploading documents:", error);
-        setLoading(false);
-      }
+      upload_pdf(files);
+      // setLoading(true);
+      // let currstate = setInitialFilesState(files);
+      // try {
+      //   for (let index = 0; index < files.length; index++) {
+      //     const updatedFile = await getApiResponse(files[index]);
+      //     currstate[index] = updatedFile;
+      //     setUploadedFiles([...currstate]);
+      //   }
+      //   setLoading(false);
+      // } catch (error) {
+      //   console.error("Error uploading documents:", error);
+      //   setLoading(false);
+      // }
     } else {
       console.error("No files selected.");
     }
@@ -155,13 +169,13 @@ function UploadDocumentPage() {
               </tr>
             </thead>
             <tbody>
-              {uploadedFiles.map((file, index) => (
+              {uploadedFiles.map((uploadedFile, index) => (
                 <tr key={`pdf-${index}`} onClick={() => {
-                  window.open(`/my-documents/${file.pdfId}`, '_blank');
+                  window.open(`/my-documents/${uploadedFile.pdfId}`, '_blank');
                 }}>
-                  <td>{file.pdfStatus}</td>
-                  <td>{file.pdfName}</td>
-                  <td>{file.pdfId}</td>
+                  <td>{uploadedFile.pdfStatus}</td>
+                  <td>{uploadedFile.pdfName}</td>
+                  <td>{uploadedFile.pdfId}</td>
                 </tr>
               ))}
             </tbody>
