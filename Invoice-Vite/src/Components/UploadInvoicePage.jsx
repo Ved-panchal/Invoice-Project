@@ -58,12 +58,13 @@ function UploadDocumentPage() {
     try {
       const formData = new FormData();
       files.forEach((file) => formData.append('documents', file));
-      const response = await axios.post('http://localhost:5500/uploadFiles/1', formData, {
+      const response = await axios.post('http://localhost:5500/uploadFiles/2', formData, { // 2 is for user id when login is created then it should be replaced
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response;
+      console.log("response", response)
+      return response.data.result;
     } catch (error) {
       console.log('error uploading', error);
       throw error;
@@ -74,6 +75,7 @@ function UploadDocumentPage() {
     event.preventDefault();
     if (files.length > 0) {
       setLoading(true);
+
 
       // Add files to uploadedFiles with status "Pending"
       const newFiles = files.map((file) => ({
@@ -99,7 +101,6 @@ function UploadDocumentPage() {
   const handleDelete = (fileToDelete) => {
     setFiles(files.filter((file) => file !== fileToDelete));
   };
-
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>

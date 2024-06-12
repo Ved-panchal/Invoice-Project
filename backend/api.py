@@ -102,6 +102,7 @@ async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
         # Insert initial data for all PDFs
         inserted_ids = []
         for document in documents:
+
             result = user_pdf_mapping_collection.insert_one({
                 "userId": user_id,
                 "pdfData": {
@@ -140,6 +141,7 @@ async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
                     "pdfName": document.filename,
                     "pdfStatus": "Completed"
                 }))
+
 
     except Exception as e:
         print("Error uploading files:", e)
@@ -195,9 +197,8 @@ def get_data_from_mongo(invoice_id: str):
         data = convert_objectid(data)
     return data
 
-@app.post('/get_pdfs')
-def get_all_pdf_data_from_userid(payload: dict):
-    user_id = int(payload.get("userId"))
+@app.get('/get_pdfs/{user_id}')
+def get_all_pdf_data_from_userid(user_id: int):
     response = []
     for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort([("_id", -1)]).limit(5):
         response.append(record)
