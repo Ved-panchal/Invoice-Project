@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import os, ssl, cloudinary, cloudinary.uploader
+import os, ssl, cloudinary, cloudinary.uploader, json
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
@@ -10,25 +10,16 @@ from conversion import convert_image, convert_doc
 from extraction import process_file
 from rpc import RpcClient
 from database_collections import MongoDBConnection
-
-# # Mongo variables
-# uri = config("MONGO_URI")
-# db_name = config("MONGO_DB_NAME")
-# user_collection_name = config("USER_COLLECTION_NAME")
-# pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
-# user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
-
-# mongo_client = pymongo.MongoClient(uri)
-# db = mongo_client[db_name]
-# users_collection = db[user_collection_name]
-# pdf_data_collection = db[pdf_data_collection_name]
-# user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
+from fastapi import WebSocket, WebSocketDisconnect
+from fastapi_socket import ConnectionManager
 
 mongo_conn = MongoDBConnection()
 # Access collections
 users_collection = mongo_conn.get_users_collection()
 pdf_data_collection = mongo_conn.get_pdf_data_collection()
 user_pdf_mapping_collection = mongo_conn.get_user_pdf_mapping_collection()
+
+manager = ConnectionManager()
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -67,6 +58,15 @@ def hello():
     """
     return "hello"
 
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: str):
+    await manager.connect(websocket)
+    # active_connections[user_id] = websocket
+    try:
+        while True:
+            await websocket.receive_text()  # Keep the connection open and listen for incoming messages
+    except WebSocketDisconnect:
+        manager.disconnect(user_id)
 
 @app.post("/uploadFiles/{user_id}")
 async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...)):
@@ -110,10 +110,12 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
         #     file_id = await store_pdf_data(user_id, filename)
 
         rpc_client = RpcClient()
-        rpc_client.call({
+        response = rpc_client.call({
             'user_id': user_id,
             'pdf_paths': filenames
         })
+
+        print(f'user_id: {user_id}\nresponse from worker: {response}')
 
         print("message: ", "File uploaded successfully")
         # return JSONResponse(content={"message": "File uploaded successfully"})

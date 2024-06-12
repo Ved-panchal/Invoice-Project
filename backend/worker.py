@@ -14,10 +14,6 @@ API_KEY_NO = sys.argv[1]  # Read the API key from command-line arguments
 # Static folder
 STATIC_DIR = Path("static")
 
-
-
-
-
 client = Together(
     api_key = config(f'TOGETHER_API_KEY_{API_KEY_NO}')
 )

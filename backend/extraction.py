@@ -87,20 +87,20 @@ def get_invoice_data_text(client, pdf_path: TextData) -> list:
 
     try:
         pdf_data = get_pdf_data_from_pdfplumber(pdf_path)
-        print(pdf_data)
+        # print(pdf_data)
         result = get_data_from_gpt(DataType.TEXT, client, pdf_data)
         if result:
             extracted_text = remove_comments_from_json(result)
-            print("extracted_text: ", extracted_text)
+            # print("extracted_text: ", extracted_text)
             json_data = json.loads(extracted_text)
-            print("json_data: ", json_data)
+            # print("json_data: ", json_data)
             res_list = get_cords_of_word(json_data, pdf_path)
             res_list.insert(0, json_data)
             return res_list
         else:
             print('Could not fetch data from API.')
     except Exception as e:
-        print("Error requesting api",e)
+        print("Error requesting api from extraction/get_invoice_data_text.\n",e)
         raise HTTPException(status_code=500, detail=str(e))
     
 def process_file(client, pdf_data_collection, filename: str, user_id: str) -> str:
