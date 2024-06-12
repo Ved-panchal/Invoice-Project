@@ -1,3 +1,4 @@
 .env
 static
 __pycache__
+*test*
