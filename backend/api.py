@@ -14,6 +14,19 @@ from database_collections import MongoDBConnection
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi_socket import ConnectionManager
 
+# # Mongo variables
+# uri = config("MONGO_URI")
+# db_name = config("MONGO_DB_NAME")
+# user_collection_name = config("USER_COLLECTION_NAME")
+# pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
+# user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
+
+# mongo_client = pymongo.MongoClient(uri)
+# db = mongo_client[db_name]
+# users_collection = db[user_collection_name]
+# pdf_data_collection = db[pdf_data_collection_name]
+# user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
+
 mongo_conn = MongoDBConnection()
 # Access collections
 users_collection = mongo_conn.get_users_collection()
@@ -93,28 +106,6 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
 
             with open(file_location, "wb") as f:
                 f.write(document.file.read())
-                
-            filename = document.filename
-            file_id = await process_file(filename, user_id)
-            file_ext = filename.split('.')[-1]
-            file_location = STATIC_DIR / str(user_id) / filename
-
-            new_filename = f"{file_id}.{file_ext}"
-            new_file_location = STATIC_DIR / str(user_id) / new_filename
-            os.rename(file_location, new_file_location)
-
-            user_pdf_mapping_collection.update_one(
-                {"_id": inserted_id},
-                {"$set": {"pdfData.pdfId": file_id, "pdfData.pdfStatus": "Completed"}}
-            )
-
-            # Send the update to the WebSocket connection
-            if user_id in active_connections:
-                await active_connections[user_id].send_text(json.dumps({
-                    "pdfId": file_id,
-                    "pdfName": document.filename,
-                    "pdfStatus": "Completed"
-                }))
 
 
         # Schedule the upload_files_to_queue task as a background task
