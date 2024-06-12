@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+/* eslint-disable react/prop-types */
+import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import axios from 'axios';
@@ -78,7 +79,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
         </div>
         {imgCondition ? (
           <div className="pdf-view">
-            <img src={`http://localhost:5500/static/${fileCode}.JPEG`} alt="" style={{ height: '100%', width: '100%' }} />
+            <img src={`http://localhost:5500/static/1/${fileCode}.JPEG`} alt="" style={{ height: '100%', width: '100%' }} />
           </div>
         ) : (
           <div className="pdf-view" ref={canvasContainerRef}></div>

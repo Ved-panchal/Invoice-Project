@@ -85,9 +85,9 @@ async def get_invoice_data_text(client, pdf_path: TextData) -> list:
         result = get_data_from_gpt(DataType.TEXT, client, pdf_data)
         if result:
             extracted_text = remove_comments_from_json(result)
-            print("extracted_text: ", extracted_text)
+            # print("extracted_text: ", extracted_text)
             json_data = json.loads(extracted_text)
-            print("json_data: ", json_data)
+            # print("json_data: ", json_data)
             res_list = get_cords_of_word(json_data, pdf_path)
             res_list.insert(0, json_data)
             return res_list
