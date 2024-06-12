@@ -1,4 +1,3 @@
-import React, { useEffect } from 'react';
 import PdfViewer from './PdfViewer'; // Importing PdfViewer component
 import { useParams } from 'react-router-dom';
 
@@ -18,11 +17,7 @@ const MyDocument = () => {
     }
     return (
         <div>
-            {/* 
-                Render PdfViewer component only if 'fileName' is available
-                Pass the PDF URL and file name as props to PdfViewer component
-            */}
-            {fileName && <PdfViewer pdfUrl={`http://localhost:5500/static/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
+            {fileName && <PdfViewer pdfUrl={`http://localhost:5500/static/1/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
         </div>
     );
 };

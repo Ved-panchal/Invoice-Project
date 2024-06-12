@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 
 function UploadDocumentPage() {
@@ -16,22 +16,43 @@ function UploadDocumentPage() {
     accept: ".pdf, .jpg, .jpeg, .png, .docx",
   });
 
-  // const upload_pdf = async (file) => {
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('document', file);
-  // .// const response = await axios.get('http://localhost:5500/stream');
-  //     const response = await axios.post('http://localhost:5500/upload', formData, {
-  //       headers: {
-  //         'Content-Type': 'multipart/form-data',
-  //       },
-  //     });
-  //     return response;
-  //   } catch (error) {
-  //     console.log('error uploading', error);
-  //     throw error;
-  //   }
-  // };
+  useEffect(() => {
+    const get_pdfs = async () => {
+      let response = await axios.post("http://localhost:5500/get_pdfs", {
+        userId: 1,
+      });
+      let data = response.data;
+      setUploadedFiles(data);
+    };
+    get_pdfs();
+  }, []);
+
+  useEffect(() => {
+    const socket = new WebSocket("ws://localhost:5500/ws/1");
+
+    // Listen for messages from the WebSocket server
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      // Update the uploadedFiles state based on the received message
+      setUploadedFiles((prevFiles) => {
+        const index = prevFiles.findIndex((file) => file.pdfName === message.pdfName);
+        if (index !== -1) {
+          return [
+            ...prevFiles.slice(0, index),
+            { ...prevFiles[index], ...message },
+            ...prevFiles.slice(index + 1),
+          ];
+        } else {
+          return prevFiles;
+        }
+      });
+    };
+
+    // Cleanup function to close WebSocket connection when component unmounts
+    return () => {
+      socket.close();
+    };
+  }, []);
 
   const upload_pdf = async (files) => {
     try {
@@ -50,61 +71,28 @@ function UploadDocumentPage() {
     }
   };
 
-  // const setInitialFilesState = (files) => {
-  //   let prevUploadedFiles = uploadedFiles;
-  //   let newFiles = files.map((file) => ({
-  //     pdfId: "Loading...",
-  //     pdfName: file.name,
-  //     pdfStatus: 'Pending'
-  //   }));
-  //   setUploadedFiles([...newFiles, ...prevUploadedFiles]);
-  //   return [...newFiles, ...prevUploadedFiles];
-  // };
-
-
-
-  // const getApiResponse = async (file) => {
-  //   try {
-  //     let response = await upload_pdf(file);
-  //     const fileId = response.data.file_id;
-  //     return {
-  //       pdfStatus: 'Completed',
-  //       pdfId: fileId,
-  //       pdfName: file.name
-  //     };
-  //   } catch (error) {
-  //     console.error('Error uploading document:', error);
-  //     return {
-  //       pdfStatus: 'Exception',
-  //       pdfId: 'cannot be extracted',
-  //       pdfName: file.name
-  //     };
-  //   }
-  // };
-  
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (files.length > 0) {
       setLoading(true);
-      let newFiles = await upload_pdf(files);
-      newFiles = newFiles.map((newFile) => {
-        return newFile.pdfData;
-      })
-      console.log("newFiles", newFiles)
-      setUploadedFiles((prevUploadedFiles) => [...newFiles, ...prevUploadedFiles]);
-      // let currstate = setInitialFilesState(files);
-      // try {
-      //   for (let index = 0; index < files.length; index++) {
-      //     const updatedFile = await getApiResponse(files[index]);
-      //     currstate[index] = updatedFile;
-      //     setUploadedFiles([...currstate]);
-      //   }
-      setLoading(false);
-      // } catch (error) {
-      //   console.error("Error uploading documents:", error);
-      //   setLoading(false);
-      // }
+
+
+      // Add files to uploadedFiles with status "Pending"
+      const newFiles = files.map((file) => ({
+        pdfId: "Loading...",
+        pdfName: file.name,
+        pdfStatus: "Pending"
+      }));
+      setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+
+      try {
+        const response = await upload_pdf(files);
+        console.log("Files uploaded successfully:", response.data);
+      } catch (error) {
+        console.error("Error uploading documents:", error);
+      } finally {
+        setLoading(false);
+      }
     } else {
       console.error("No files selected.");
     }
@@ -113,16 +101,6 @@ function UploadDocumentPage() {
   const handleDelete = (fileToDelete) => {
     setFiles(files.filter((file) => file !== fileToDelete));
   };
-
-  useEffect(() => {
-    const get_pdfs = async () => {
-      let response = await axios.get("http://localhost:5500/get_pdfs/2");
-      let data = response.data;
-      setUploadedFiles(data);
-    };
-    get_pdfs();
-  }, []);
-
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
@@ -174,9 +152,12 @@ function UploadDocumentPage() {
             </thead>
             <tbody>
               {uploadedFiles.map((uploadedFile, index) => (
-                <tr key={`pdf-${index}`} onClick={() => {
-                  window.open(`/my-documents/${uploadedFile.pdfId}`, '_blank');
-                }}>
+                <tr
+                  key={`pdf-${index}`}
+                  onClick={() => {
+                    window.open(`/my-documents/${uploadedFile.pdfId}`, '_blank');
+                  }}
+                >
                   <td>{uploadedFile.pdfStatus}</td>
                   <td>{uploadedFile.pdfName}</td>
                   <td>{uploadedFile.pdfId}</td>
@@ -186,11 +167,6 @@ function UploadDocumentPage() {
           </table>
         </div>
       </div>
-      {/* {loading && (
-        <div style={styles.overlay}>
-          <Loader />
-        </div>
-      )} */}
     </div>
   );
 }
@@ -266,42 +242,6 @@ const styles = {
     padding: "10px 20px",
     fontSize: "16px",
     cursor: "pointer",
-  },
-  cancelButton: {
-    marginTop: "10px",
-    padding: "10px 20px",
-    fontSize: "16px",
-    cursor: "pointer",
-    backgroundColor: "#dc3545",
-    color: "#fff",
-  },
-  progressContainer: {
-    width: "100%",
-    backgroundColor: "#e0e0e0",
-    borderRadius: "5px",
-    marginTop: "10px",
-  },
-  progressBar: {
-    height: "10px",
-    backgroundColor: "#76c7c0",
-    borderRadius: "5px",
-  },
-  status: {
-    marginTop: "10px",
-    fontSize: "14px",
-    fontWeight: "bold",
-  },
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999,
   },
 };
 

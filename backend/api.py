@@ -1,4 +1,5 @@
-from fastapi import FastAPI, File, HTTPException, UploadFile
+import asyncio
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,9 +31,9 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 # Cloudinary configuration
 cloudinary.config(
-    cloud_name = config("CLOUDNARY_CLOUD_NAME"),
-    api_key = config("CLOUDNARY_API_KEY"),
-    api_secret = config("CLOUDNARY_SECRET")
+    cloud_name=config("CLOUDNARY_CLOUD_NAME"),
+    api_key=config("CLOUDNARY_API_KEY"),
+    api_secret=config("CLOUDNARY_SECRET")
 )
 
 # Static folder
@@ -52,23 +53,43 @@ app.add_middleware(
 # Static file hosting
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Load your OpenAI API key from environment variable
+# Together API client
+client = Together(api_key=config("TOGETHER_API_KEY"))
 # client = OpenAI(
-#     api_key = config('OPENAI_API_KEY')
+#     api_key = config(f'OPENAI_API_KEY')
 # )
 
-client = Together(api_key=config("TOGETHER_API_KEY"))
+# Active WebSocket connections
+active_connections = {}
 
 @app.get("/hello")
 def hello():
-    """
-    Simple API endpoint to test if the server is running.
-
-    Returns:
-    - str: A greeting message.
-    """
     return "hello"
 
+@app.websocket("/ws/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    await websocket.accept()
+    active_connections[user_id] = websocket
+    
+    try:
+        while True:
+            await websocket.receive_text()  # Keep the connection open and listen for incoming messages
+    except WebSocketDisconnect:
+        del active_connections[user_id]
+
+async def watch_mongo_changes():
+    change_stream = user_pdf_mapping_collection.watch(full_document="updateLookup")
+
+    async for change in change_stream:
+        full_document = change["fullDocument"]
+        user_id = full_document.get("userId")
+        if user_id in active_connections:
+            message = json.dumps(full_document)
+            await active_connections[user_id].send_text(message)
+
+# @app.on_event("startup")
+# async def startup_event():
+#     asyncio.create_task(watch_mongo_changes())
 
 @app.post("/uploadFiles/{user_id}")
 async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
@@ -78,29 +99,54 @@ async def upload_files(user_id: int, documents: list[UploadFile] = File(...)):
         if not user_dir.exists():
             os.makedirs(user_dir)
 
+        # Insert initial data for all PDFs
+        inserted_ids = []
         for document in documents:
-            pdf_data = {
-                "userId":user_id,
-                "pdfData":{
-                    "pdfId":"",
-                    "pdfName":document.filename,
-                    "pdfStatus":"Pending"
+
+            result = user_pdf_mapping_collection.insert_one({
+                "userId": user_id,
+                "pdfData": {
+                    "pdfId": "",
+                    "pdfName": document.filename,
+                    "pdfStatus": "Pending"
                 }
-            }
-            result = user_pdf_mapping_collection.insert_one(pdf_data)
-            pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
-            response.append(pdf_data)
-            file_ext = document.filename.split('.')[-1].lower()
-            newFileName = f'{pdf_data["_id"]}.{file_ext}'
-            file_location = user_dir / newFileName
+            })
+            inserted_ids.append(result.inserted_id)
+            response.append(str(result.inserted_id)) if result else response.append("")
+
+        # Process each file and update the corresponding document
+        for document, inserted_id in zip(documents, inserted_ids):
+            file_location = user_dir / document.filename
             with open(file_location, "wb") as f:
                 f.write(document.file.read())
+                
+            filename = document.filename
+            file_id = await process_file(filename, user_id)
+            file_ext = filename.split('.')[-1]
+            file_location = STATIC_DIR / str(user_id) / filename
+
+            new_filename = f"{file_id}.{file_ext}"
+            new_file_location = STATIC_DIR / str(user_id) / new_filename
+            os.rename(file_location, new_file_location)
+
+            user_pdf_mapping_collection.update_one(
+                {"_id": inserted_id},
+                {"$set": {"pdfData.pdfId": file_id, "pdfData.pdfStatus": "Completed"}}
+            )
+
+            # Send the update to the WebSocket connection
+            if user_id in active_connections:
+                await active_connections[user_id].send_text(json.dumps({
+                    "pdfId": file_id,
+                    "pdfName": document.filename,
+                    "pdfStatus": "Completed"
+                }))
+
 
     except Exception as e:
         print("Error uploading files:", e)
         return {"success": False, "error": str(e)}
     return {"success": True, "result": response}
-
 
 @app.post("/upload")
 async def upload_file(document: UploadFile = File(...)):
@@ -121,11 +167,9 @@ async def upload_file(document: UploadFile = File(...)):
         file_ext = filename.split('.')[-1]
         file_location = STATIC_DIR / filename
 
-        # Construct new filename using file_id and the original extension
         new_filename = f"{file_id}.{file_ext}"
         new_file_location = STATIC_DIR / new_filename
 
-        # Rename the file
         os.rename(file_location, new_file_location)
 
         return JSONResponse(content={"message": "File uploaded successfully", "file_id": file_id}, status_code=200)
@@ -138,15 +182,13 @@ async def delete_folder(folder_name: str):
         raise HTTPException(status_code=400, detail='No folder name provided')
 
     try:
-        # Delete all resources inside the folder
         cloudinary.api.delete_resources_by_prefix(f'output_images/{folder_name}')
-        # Delete the folder itself
         cloudinary.api.delete_folder(f'output_images/{folder_name}')
 
         return {'message': f'Folder {folder_name} and its contents have been deleted successfully.'}
     except cloudinary.exceptions.Error as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @app.get('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str):
     data = pdf_data_collection.find_one({"_id": ObjectId(invoice_id)})
@@ -158,7 +200,7 @@ def get_data_from_mongo(invoice_id: str):
 @app.get('/get_pdfs/{user_id}')
 def get_all_pdf_data_from_userid(user_id: int):
     response = []
-    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort({"_id": -1}).limit(5):
+    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort([("_id", -1)]).limit(5):
         response.append(record)
     transformed_data = [item["pdfData"] for item in response]
     return transformed_data
@@ -175,12 +217,7 @@ def insert_mapping_data(payload: dict):
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 def convert_objectid(doc):
-    """
-    Recursively converts ObjectId to string in the given document.
-    """
     if isinstance(doc, dict):
         return {key: convert_objectid(value) for key, value in doc.items()}
     elif isinstance(doc, list):
@@ -190,13 +227,11 @@ def convert_objectid(doc):
     else:
         return doc
 
-async def process_file(filename: str) -> str:
-    # await upload_file(file)
-    # filename = payload.get("filename")
+async def process_file(filename: str, user_id: int) -> str:
     file_ext = filename.split('.')[-1].lower()
     if file_ext == 'pdf':
-        json_data =  await get_invoice_data_text(client, f"./static/{filename}")
-        data = {'data' : json_data}
+        json_data = await get_invoice_data_text(client, f"./static/{str(user_id)}/{filename}")
+        data = {'data': json_data}
         result = pdf_data_collection.insert_one(data)
         if result:
             result = str(result.inserted_id) + "0"
@@ -208,7 +243,7 @@ async def process_file(filename: str) -> str:
         if filename:
             (uploaded_image_urls, _) = await process_image(filename)
             json_data = await get_invoice_data(client, uploaded_image_urls)
-            data = {'data' : [json_data]}
+            data = {'data': [json_data]}
             result = pdf_data_collection.insert_one(data)
             if result:
                 result = str(result.inserted_id) + "1"
@@ -219,7 +254,6 @@ async def process_file(filename: str) -> str:
             raise HTTPException(status_code=400, detail="Can not convert image to JPEG")
     else:
         raise HTTPException(status_code=400, detail='Unsupported file format')
-
 
 if __name__ == "__main__":
     import uvicorn
