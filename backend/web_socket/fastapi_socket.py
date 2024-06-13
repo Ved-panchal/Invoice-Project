@@ -1,7 +1,7 @@
 from fastapi import WebSocket
 from typing import List, Dict
 
-class ConnectionManager:
+class SocketConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
 
@@ -21,7 +21,3 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for websocket in self.active_connections.values():
             await websocket.send_text(message)
-
-# async def send_to_websocket(client_id, message):
-#     async with websockets.connect(f"ws://localhost:8000/ws/{client_id}") as websocket:
-#         await websocket.send(message)

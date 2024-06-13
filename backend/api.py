@@ -3,37 +3,17 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import os, ssl, cloudinary, cloudinary.uploader, json
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
 from conversion import convert_image, convert_doc
 from extraction import process_file
-from rpc import RpcClient
-from database_collections import MongoDBConnection
 from fastapi import WebSocket, WebSocketDisconnect
-from fastapi_socket import ConnectionManager
+from web_socket import socket_manager
+from database import mongo_conn
 
-# # Mongo variables
-# uri = config("MONGO_URI")
-# db_name = config("MONGO_DB_NAME")
-# user_collection_name = config("USER_COLLECTION_NAME")
-# pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
-# user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
-
-# mongo_client = pymongo.MongoClient(uri)
-# db = mongo_client[db_name]
-# users_collection = db[user_collection_name]
-# pdf_data_collection = db[pdf_data_collection_name]
-# user_pdf_mapping_collection = db[user_pdf_mapping_collection_name]
-
-mongo_conn = MongoDBConnection()
-# Access collections
-users_collection = mongo_conn.get_users_collection()
-pdf_data_collection = mongo_conn.get_pdf_data_collection()
-user_pdf_mapping_collection = mongo_conn.get_user_pdf_mapping_collection()
-
-manager = ConnectionManager()
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -48,7 +28,15 @@ cloudinary.config(
 # Static folder
 STATIC_DIR = Path("static")
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print('app started ...')
+    mongo_conn.connect()
+
+    yield
+    print('app closed ...')
+
+app = FastAPI(lifespan=lifespan)
 
 # Allow cross origin
 app.add_middleware(
@@ -68,12 +56,12 @@ def hello():
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    await manager.connect(websocket, user_id)
+    await socket_manager.connect(websocket, user_id)
     try:
         while True:
             await websocket.receive_text()  # Keep the connection open and listen for incoming messages
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
+        socket_manager.disconnect(user_id)
 
 @app.post("/uploadFiles/{user_id}")
 async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...)):
@@ -94,7 +82,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
                     "pdfStatus":"Pending"
                 }
             }
-            result = user_pdf_mapping_collection.insert_one(pdf_data)
+            result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
             pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
             response.append(pdf_data)
             file_ext = document.filename.split('.')[-1].lower()
@@ -121,20 +109,20 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
         # for filename in filenames:
         #     file_id = await store_pdf_data(user_id, filename)
 
-        rpc_client = RpcClient()
+        # rpc_client = RpcClient()
 
-        def handle_response(response):
-            print(f'response: {response}')
+        # def handle_response(response):
+        #     print(f'response: {response}')
 
-        rpc_client.call({
-            'user_id': user_id,
-            'pdf_paths': filenames
-        }, handle_response)
+        # rpc_client.call({
+        #     'user_id': user_id,
+        #     'pdf_paths': filenames
+        # }, handle_response)
 
-        # print(f'user_id: {user_id}\nresponse from worker: {response}')
+        # # print(f'user_id: {user_id}\nresponse from worker: {response}')
 
         print("message: ", "File uploaded successfully")
-        # return JSONResponse(content={"message": "File uploaded successfully"})
+        return JSONResponse(content={"message": "File uploaded successfully"})
     except Exception as e:
         return JSONResponse(content={"message": "File upload failed", "error": str(e)})
 
@@ -153,7 +141,7 @@ async def delete_folder(folder_name: str):
 
 @app.get('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str):
-    data = pdf_data_collection.find_one({"_id": ObjectId(invoice_id)})
+    data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
 
     if data:
         data = convert_objectid(data)
@@ -162,7 +150,7 @@ def get_data_from_mongo(invoice_id: str):
 @app.get('/get_pdfs/{user_id}')
 def get_all_pdf_data_from_userid(user_id: int):
     response = []
-    for record in user_pdf_mapping_collection.find({"userId": user_id}, {"_id": 0, "userId": 0}).sort([("_id", -1)]).limit(5):
+    for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}, {"_id": 0, "userId": 0}).sort([("_id", -1)]).limit(5):
         response.append(record)
     transformed_data = [item["pdfData"] for item in response]
     return transformed_data
@@ -170,7 +158,7 @@ def get_all_pdf_data_from_userid(user_id: int):
 @app.post('/insert_mapping_data')
 def insert_mapping_data(payload: dict):
     try:
-        inserted_id = user_pdf_mapping_collection.insert_one(payload)
+        inserted_id = mongo_conn.get_user_pdf_mapping_collection().insert_one(payload)
         if not inserted_id:
             print('Mapping data insertion error')
             raise HTTPException(status_code=400, detail="Mapping data insertion error")

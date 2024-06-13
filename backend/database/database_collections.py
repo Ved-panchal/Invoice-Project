@@ -2,17 +2,8 @@ from pymongo import MongoClient
 from decouple import config
 
 class MongoDBConnection:
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.__initialized = False
-        return cls._instance
 
     def __init__(self):
-        if self.__initialized:
-            return
         self.uri = config("MONGO_URI")
         self.db_name = config("MONGO_DB_NAME")
         self.user_collection_name = config("USER_COLLECTION_NAME")
@@ -25,8 +16,6 @@ class MongoDBConnection:
         self.pdf_data_collection = None
         self.user_pdf_mapping_collection = None
 
-        self.connect()
-        self.__initialized = True
 
     def connect(self):
         try:

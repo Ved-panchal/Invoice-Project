@@ -1,105 +1,142 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { useNavigate } from 'react-router-dom';
+import axios from "axios";
+import React, { useState, useCallback, useEffect } from "react";
+import { useDropzone } from "react-dropzone";
+import { format, isValid } from "date-fns";
 
-function UploadDocumentPage() {
+function Temp() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('idle');
-  const xhrRef = useRef(null);
-  const navigate = useNavigate();
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [error, setError] = useState(null);
 
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
-    setStatus('idle');
-    setProgress(0);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg'],
-    multiple: true,
+    accept: "application/pdf, image/jpeg, image/png",
   });
+
+  const delay = () => {
+    return new Promise((resolve) => {
+      setTimeout(resolve, 5000);
+    });
+  };
+
+  const upload_pdf = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append("document", file);
+      const response = await axios.post(
+        "http://localhost:5500/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      await delay();
+      return response;
+    } catch (error) {
+      console.error("Error uploading document:", error);
+      throw error;
+    }
+  };
+
+  const setInitialFilesState = (files) => {
+    const newFiles = files.map((file) => ({
+      pdfId: "Loading...",
+      pdfName: file.name,
+      pdfStatus: "Pending",
+      createdAt: new Date(),
+    }));
+    setUploadedFiles((prevUploadedFiles) => [
+      ...newFiles,
+      ...prevUploadedFiles,
+    ]);
+    return [...newFiles, ...uploadedFiles];
+  };
+
+  const getApiResponse = async (file) => {
+    try {
+      const response = await upload_pdf(file);
+      const fileId = response.data;
+      return {
+        pdfStatus: "Completed",
+        pdfId: fileId,
+        pdfName: file.name,
+        createdAt: new Date(),
+      };
+    } catch (error) {
+      return {
+        pdfStatus: "Exception",
+        pdfId: "cannot be extracted",
+        pdfName: file.name,
+        createdAt: new Date(),
+      };
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (files.length > 0) {
       setLoading(true);
-      setStatus('uploading');
-      try {
-        const formData = new FormData();
-        files.forEach((file, index) => {
-          formData.append(`document${index + 1}`, file);
-        });
-
-        const xhr = new XMLHttpRequest();
-        xhrRef.current = xhr;
-        xhr.open('POST', 'http://localhost:5500/api/extract', true);
-
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = (event.loaded / event.total) * 100;
-            setProgress(percentComplete);
-          }
-        };
-
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            const response = JSON.parse(xhr.responseText);
-            navigate('/invoice-details', { state: { invoiceData: response } });
-            setStatus('completed');
-          } else {
-            console.error('Failed to upload documents.');
-            setStatus('failed');
-          }
-          setLoading(false);
-        };
-
-        xhr.onerror = () => {
-          console.error('Error uploading documents.');
-          setLoading(false);
-          setStatus('failed');
-        };
-
-        xhr.send(formData);
-      } catch (error) {
-        console.error('Error uploading documents:', error);
-        setLoading(false);
-        setStatus('failed');
+      setError(null);
+      const initialFilesState = setInitialFilesState(files);
+      for (let index = 0; index < files.length; index++) {
+        try {
+          const updatedFile = await getApiResponse(files[index]);
+          initialFilesState[index] = updatedFile;
+          setUploadedFiles([...initialFilesState]);
+        } catch (error) {
+          console.error("Error uploading document:", error);
+          setError("Error uploading document. Please try again.");
+        }
       }
-    } else {
-      console.error('No files selected.');
-    }
-  };
-
-  const handleCancel = () => {
-    if (xhrRef.current) {
-      xhrRef.current.abort();
       setLoading(false);
-      setStatus('failed');
+      setFiles([]);
+    } else {
+      console.error("No files selected.");
+      setError("No files selected. Please select files to upload.");
     }
   };
 
-  const handleDelete = (fileToDelete) => {
-    setFiles(files.filter((file) => file !== fileToDelete));
-    setStatus('idle');
-    setProgress(0);
+  const handleDelete = async (fileToDelete) => {
+    try {
+      // Only attempt to delete from the server if the file has been successfully uploaded
+      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading...") {
+        await axios.post("http://localhost:5500/delete", { fileId: fileToDelete.pdfId });
+      }
+      setUploadedFiles((prevUploadedFiles) =>
+        prevUploadedFiles.filter((file) => file.pdfId !== fileToDelete.pdfId)
+      );
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      setError("Error deleting document. Please try again.");
+    }
   };
 
-  const getStatusStyle = () => {
-    switch (status) {
-      case 'uploading':
-        return styles.uploading;
-      case 'processing':
-        return styles.processing;
-      case 'completed':
-        return styles.completed;
-      case 'failed':
-        return styles.failed;
-      default:
-        return {};
-    }
+  useEffect(() => {
+    const fetchUploadedFiles = async () => {
+    localStorage.setItem('user_id', '2');
+    const user_id = localStorage.getItem('user_id');
+    try {
+      let response = await axios.get(`http://localhost:5500/get_pdfs/${user_id}`);
+      let data = response.data;
+      setUploadedFiles(data);
+    } catch (error) {
+      console.error("Error fetching uploaded files:", error);
+      setError("Error fetching uploaded files. Please try again.");
+    }};
+
+    fetchUploadedFiles();
+  }, []);
+
+  const formatDate = (date) => {
+    if (!date || !isValid(new Date(date))) return "Invalid date";
+    return format(new Date(date), "MMM dd, yyyy, hh:mm a");
   };
 
   return (
@@ -112,7 +149,10 @@ function UploadDocumentPage() {
             {isDragActive ? (
               <p>Drop the files here ...</p>
             ) : (
-              <p>Drag 'n' drop PDF, DOCX, or JPG files here, or click to select them</p>
+              <p>
+                Drag 'n' drop PDF, JPEG, or PNG files here, or click to select
+                them
+              </p>
             )}
           </div>
           {files.length > 0 && (
@@ -120,33 +160,87 @@ function UploadDocumentPage() {
               {files.map((file, index) => (
                 <div key={index} style={styles.fileDetails}>
                   <p style={styles.fileName}>Selected File: {file.name}</p>
-                  <button type="button" onClick={() => handleDelete(file)} style={styles.deleteButton}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiles((prevFiles) =>
+                        prevFiles.filter((f, i) => i !== index)
+                      );
+                    }}
+                    style={styles.deleteButton}
+                  >
                     Delete
                   </button>
                 </div>
               ))}
             </div>
           )}
-          <button type="submit" disabled={files.length === 0 || loading} style={styles.button}>
-            {loading ? 'Uploading...' : 'Upload'}
+          {error && <p style={styles.error}>{error}</p>}
+          <button
+            type="submit"
+            disabled={files.length === 0 || loading}
+            style={styles.button}
+          >
+            {loading ? "Uploading..." : "Upload"}
           </button>
-          {loading && (
-            <button type="button" onClick={handleCancel} style={styles.cancelButton}>
-              Cancel
-            </button>
-          )}
-          <div style={{ ...styles.status, ...getStatusStyle() }}>
-            {status === 'uploading' && 'Uploading...'}
-            {status === 'processing' && 'Processing...'}
-            {status === 'completed' && 'Completed'}
-            {status === 'failed' && 'Failed'}
-          </div>
-          {loading && (
-            <div style={styles.progressContainer}>
-              <div style={{ ...styles.progressBar, width: `${progress}%` }} />
-            </div>
-          )}
         </form>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.tableHeader}>STATUS</th>
+                <th style={styles.tableHeader}>FILE NAME</th>
+                <th style={styles.tableHeader}>CREATED</th>
+                <th style={styles.tableHeader}>APPROVALS</th>
+                <th style={styles.tableHeader}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {uploadedFiles.map((file, index) => (
+                <tr key={`pdf-${index}`} style={styles.tableRow}>
+                  <td style={styles.tableCell}>
+                    <span
+                      style={{
+                        ...styles.status,
+                        backgroundColor:
+                          file.pdfStatus === "Completed"
+                            ? "#28a745"
+                            : file.pdfStatus === "Pending"
+                            ? "#ffc107"
+                            : "#dc3545",
+                      }}
+                    >
+                      {file.pdfStatus}
+                    </span>
+                  </td>
+                  <td style={styles.tableCell}>{file.pdfName}</td>
+                  <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
+                  <td style={styles.tableCell}>PENDING</td>
+                  <td style={styles.tableCell}>
+                    <div style={styles.actions}>
+                      <button
+                        style={styles.deleteButton}
+                        onClick={() => handleDelete(file)}
+                      >
+                        Delete
+                      </button>
+                      {file.pdfStatus === "Completed" && (
+                        <button
+                          style={styles.viewButton}
+                          onClick={() =>
+                            window.open(`/my-documents/${file.pdfId}`, "_blank")
+                          }
+                        >
+                          View
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -154,117 +248,129 @@ function UploadDocumentPage() {
 
 const styles = {
   page: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#f7f7f7',
-    padding: '20px',
-    textAlign: 'center',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    height: "100vh",
+    backgroundColor: "#f7f7f7",
+    padding: "20px",
+    textAlign: "center",
   },
   heading: {
-    marginBottom: '20px',
-    fontSize: '2em',
+    marginBottom: "20px",
+    fontSize: "36px",
+    fontWeight: "bold",
   },
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    width: '100%',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: "80%",
   },
   form: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: '400px',
-    padding: '10px',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: "700px",
   },
   dropzone: {
-    width: '100%',
-    height: '200px',
-    padding: '40px',
-    borderWidth: '2px',
-    borderColor: '#cccccc',
-    borderStyle: 'dashed',
-    borderRadius: '5px',
-    backgroundColor: '#ffffff',
-    color: '#333333',
-    textAlign: 'center',
-    cursor: 'pointer',
-    marginBottom: '10px',
-    transition: 'all 0.2s ease-in-out',
+    width: "100%",
+    padding: "60px",
+    borderWidth: "2px",
+    borderColor: "#cccccc",
+    borderStyle: "dashed",
+    borderRadius: "5px",
+    backgroundColor: "#ffffff",
+    color: "#333333",
+    textAlign: "center",
+    cursor: "pointer",
+    marginBottom: "20px",
   },
   fileDetailsContainer: {
-    width: '100%',
-    maxHeight: '200px',
-    overflowY: 'auto',
-    marginBottom: '10px',
+    width: "100%",
+    maxHeight: "200px",
+    overflowY: "auto",
+    marginBottom: "10px",
   },
   fileDetails: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '5px',
-    padding: '5px 10px',
-    backgroundColor: '#e9e9e9',
-    borderRadius: '5px',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "5px",
+    padding: "5px 10px",
+    backgroundColor: "#e9e9e9",
+    borderRadius: "5px",
   },
   fileName: {
-    fontSize: '14px',
-    marginRight: '10px',
+    fontSize: "14px",
+    marginRight: "10px",
   },
   deleteButton: {
-    padding: '5px 10px',
-    fontSize: '12px',
-    cursor: 'pointer',
+    padding: "5px 10px",
+    fontSize: "14px",
+    backgroundColor: "#dc3545",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
   button: {
-    marginTop: '10px',
-    padding: '10px 20px',
-    fontSize: '16px',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s ease',
+    padding: "10px 20px",
+    fontSize: "16px",
+    backgroundColor: "#007bff",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
-  cancelButton: {
-    marginTop: '10px',
-    padding: '10px 20px',
-    fontSize: '16px',
-    cursor: 'pointer',
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    transition: 'background-color 0.3s ease',
+  error: {
+    color: "#dc3545",
+    marginBottom: "10px",
   },
-  progressContainer: {
-    width: '100%',
-    backgroundColor: '#e0e0e0',
-    borderRadius: '5px',
-    marginTop: '10px',
+  tableContainer: {
+    marginTop: "20px",
+    width: "100%",
+    overflowX: "auto",
   },
-  progressBar: {
-    height: '10px',
-    backgroundColor: '#76c7c0',
-    borderRadius: '5px',
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    backgroundColor: "#ffffff",
+  },
+  tableHeader: {
+    padding: "10px",
+    backgroundColor: "#007bff",
+    color: "#ffffff",
+    border: "1px solid #dddddd",
+  },
+  tableRow: {
+    borderBottom: "1px solid #dddddd",
+  },
+  tableCell: {
+    padding: "10px",
+    textAlign: "center",
+    border: "1px solid #dddddd",
   },
   status: {
-    marginTop: '10px',
-    fontSize: '14px',
-    fontWeight: 'bold',
+    padding: "5px 10px",
+    color: "#ffffff",
+    borderRadius: "5px",
   },
-  uploading: {
-    color: '#ffa500',
+  actions: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
   },
-  processing: {
-    color: '#007bff',
-  },
-  completed: {
-    color: '#28a745',
-  },
-  failed: {
-    color: '#dc3545',
+  viewButton: {
+    padding: "5px 10px",
+    fontSize: "14px",
+    backgroundColor: "#28a745",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
 };
 
-export default UploadDocumentPage;
+export default Temp;

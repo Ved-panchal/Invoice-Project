@@ -5,10 +5,9 @@ from models import DataType, ImageUrls, TextData
 from pdf_utils import get_cords_of_word, get_pdf_data_from_pdfplumber,remove_comments_from_json
 from conversion import convert_doc
 import json, os
-from database_collections import MongoDBConnection
+from database import mongo_conn
 
-mongo_client = MongoDBConnection()
-pdf_data_collection = mongo_client.get_pdf_data_collection()
+pdf_data_collection = mongo_conn.get_pdf_data_collection()
 
 def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
     """
