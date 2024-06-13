@@ -16,6 +16,8 @@ class MongoDBConnection:
         self.pdf_data_collection = None
         self.user_pdf_mapping_collection = None
 
+        self.connect()
+
 
     def connect(self):
         try:

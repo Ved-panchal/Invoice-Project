@@ -14,9 +14,13 @@ class SocketConnectionManager:
             del self.active_connections[user_id]
 
     async def send_message(self, message: str, user_id: str):
+        # print(f'Sending message: {message}')
+        # print(f'user_id1: {user_id}')
         websocket = self.active_connections.get(user_id)
+        # print(f'user_id2: {user_id}')
         if websocket:
             await websocket.send_text(message)
+        # print("Message sent")
 
     async def broadcast(self, message: str):
         for websocket in self.active_connections.values():

@@ -4,15 +4,14 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-import os, ssl, cloudinary, cloudinary.uploader, json
+import os, ssl, cloudinary, cloudinary.uploader, json, asyncio
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
-from conversion import convert_image, convert_doc
-from extraction import process_file
 from fastapi import WebSocket, WebSocketDisconnect
 from web_socket import socket_manager
 from database import mongo_conn
+from queue_service import queue_manager
 
 
 # Disable SSL certificate verification
@@ -31,7 +30,7 @@ STATIC_DIR = Path("static")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print('app started ...')
-    mongo_conn.connect()
+    # mongo_conn.connect()
 
     yield
     print('app closed ...')
@@ -105,6 +104,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
     return {"success": True, "result": response}
 
 def upload_files_to_queue(filenames: list[str], user_id: str):
+# async def upload_files_to_queue(filenames: list[str], user_id: str):
     try:
         # for filename in filenames:
         #     file_id = await store_pdf_data(user_id, filename)
@@ -120,7 +120,8 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
         # }, handle_response)
 
         # # print(f'user_id: {user_id}\nresponse from worker: {response}')
-
+        queue_manager.call(filenames, user_id)
+        # await queue_manager.call(filenames, user_id)
         print("message: ", "File uploaded successfully")
         return JSONResponse(content={"message": "File uploaded successfully"})
     except Exception as e:

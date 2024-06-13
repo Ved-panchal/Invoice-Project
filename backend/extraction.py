@@ -7,7 +7,7 @@ from conversion import convert_doc
 import json, os
 from database import mongo_conn
 
-pdf_data_collection = mongo_conn.get_pdf_data_collection()
+# mongo_conn.get_pdf_data_collection() = mongo_conn.get_pdf_data_collection()
 
 def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
     """
@@ -102,12 +102,13 @@ def get_invoice_data_text(client, pdf_path: TextData) -> list:
         print("Error requesting api from extraction/get_invoice_data_text.\n",e)
         raise HTTPException(status_code=500, detail=str(e))
     
-def process_file(client, pdf_data_collection, filename: str, user_id: str) -> str:
+def process_file(client, filename: str, user_id: str) -> str:
     file_ext = filename.split('.')[-1].lower()
     if file_ext == 'pdf':
         json_data =  get_invoice_data_text(client, f"./static/{user_id}/{filename}")
         data = {'data' : json_data}
-        result = pdf_data_collection.insert_one(data)
+        pdf_data_col = mongo_conn.get_pdf_data_collection()
+        result = pdf_data_col.insert_one(data)
         if result:
             result = str(result.inserted_id) + "0"
         else:
@@ -138,14 +139,14 @@ def store_pdf_data(client, user_id, filename, STATIC_DIR):
             # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
             #     filename = await convert_image(filename)
 
-    file_id = process_file(client, pdf_data_collection, filename, user_id)
+    file_id = process_file(client, filename, user_id)
     file_ext = filename.split('.')[-1]
     file_location = STATIC_DIR / user_id / filename
 
-            # Construct new filename using file_id and the original extension
+    # Construct new filename using file_id and the original extension
     new_filename = f"{file_id}.{file_ext}"
     new_file_location = STATIC_DIR / user_id / new_filename
 
-            # Rename the file
+    # Rename the file
     os.rename(file_location, new_file_location)
     return file_id

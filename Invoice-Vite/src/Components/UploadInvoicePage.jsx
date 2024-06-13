@@ -35,19 +35,20 @@ function UploadDocumentPage() {
     // Listen for messages from the WebSocket server
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
+      console.log(message)
       // Update the uploadedFiles state based on the received message
-      setUploadedFiles((prevFiles) => {
-        const index = prevFiles.findIndex((file) => file.pdfName === message.pdfName);
-        if (index !== -1) {
-          return [
-            ...prevFiles.slice(0, index),
-            { ...prevFiles[index], ...message },
-            ...prevFiles.slice(index + 1),
-          ];
-        } else {
-          return prevFiles;
-        }
-      });
+      // setUploadedFiles((prevFiles) => {
+      //   const index = prevFiles.findIndex((file) => file.pdfName === message.pdfName);
+      //   if (index !== -1) {
+      //     return [
+      //       ...prevFiles.slice(0, index),
+      //       { ...prevFiles[index], ...message },
+      //       ...prevFiles.slice(index + 1),
+      //     ];
+      //   } else {
+      //     return prevFiles;
+      //   }
+      // });
     };
 
     // Cleanup function to close WebSocket connection when component unmounts
