@@ -68,9 +68,7 @@ def hello():
 
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    await manager.connect(websocket)
-    # active_connections[user_id] = websocket
-
+    await manager.connect(websocket, user_id)
     try:
         while True:
             await websocket.receive_text()  # Keep the connection open and listen for incoming messages
@@ -110,6 +108,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
 
         # Schedule the upload_files_to_queue task as a background task
         background_tasks.add_task(upload_files_to_queue, filenames, user_id)
+        # upload_files_to_queue(filenames, user_id)
 
 
     except Exception as e:
@@ -123,11 +122,16 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
         #     file_id = await store_pdf_data(user_id, filename)
 
         rpc_client = RpcClient()
-        response = rpc_client.call({
+
+        def handle_response(response):
+            print(f'response: {response}')
+
+        rpc_client.call({
             'user_id': user_id,
             'pdf_paths': filenames
-        })
-        print(f'user_id: {user_id}\nresponse from worker: {response}')
+        }, handle_response)
+
+        # print(f'user_id: {user_id}\nresponse from worker: {response}')
 
         print("message: ", "File uploaded successfully")
         # return JSONResponse(content={"message": "File uploaded successfully"})

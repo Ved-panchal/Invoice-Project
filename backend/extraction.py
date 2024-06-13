@@ -8,7 +8,7 @@ import json, os
 from database_collections import MongoDBConnection
 
 mongo_client = MongoDBConnection()
-user_pdf_mapping_collection = mongo_client.get_user_pdf_mapping_collection()
+pdf_data_collection = mongo_client.get_pdf_data_collection()
 
 def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
     """
@@ -139,7 +139,7 @@ def store_pdf_data(client, user_id, filename, STATIC_DIR):
             # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
             #     filename = await convert_image(filename)
 
-    file_id = process_file(client, user_pdf_mapping_collection, filename, user_id)
+    file_id = process_file(client, pdf_data_collection, filename, user_id)
     file_ext = filename.split('.')[-1]
     file_location = STATIC_DIR / user_id / filename
 

@@ -14,10 +14,6 @@ API_KEY_NO = sys.argv[1]  # Read the API key from command-line arguments
 # Static folder
 STATIC_DIR = Path("static")
 
-
-
-
-
 client = Together(
     api_key = config(f'TOGETHER_API_KEY_{API_KEY_NO}')
 )
@@ -48,6 +44,7 @@ def on_task_request(ch, method, properties, body):
             )
         )
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        print(f'Finished task\nResponse: {response}')
     except Exception as e:
         print(f'Error sending response.\nDetails: {e}')
         ch.basic_ack(delivery_tag=method.delivery_tag)
