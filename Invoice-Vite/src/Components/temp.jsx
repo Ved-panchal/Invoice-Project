@@ -156,6 +156,15 @@ function Temp() {
     };
   }, []);
 
+  const updatePdfStatus = (pdfId, newStatus) => {
+    setUploadedFiles((prevFiles) =>
+      prevFiles.map((file) =>
+        file.pdfId === pdfId ? { ...file, pdfStatus: newStatus } : file
+      )
+    );
+  };
+  
+
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>

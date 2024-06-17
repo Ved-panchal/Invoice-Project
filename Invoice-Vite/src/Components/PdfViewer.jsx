@@ -19,6 +19,26 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     window.location = '/';
   };
 
+  const handleApprove = async () => {
+    try {
+      // Send the approval status to the server
+      await axios.post('http://localhost:5500/invoice/approve', { fileName });
+      alert('Invoice approved');
+    } catch (error) {
+      console.error('Error approving invoice', error);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      // Send the rejection status to the server
+      await axios.post('http://localhost:5500/invoice/reject', { fileName });
+      alert('Invoice rejected');
+    } catch (error) {
+      console.error('Error rejecting invoice', error);
+    }
+  };
+
   useEffect(() => {
     const getData = async () => {
       if (fileCode.substring(fileCode.length - 1) === '1') {
@@ -76,6 +96,10 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       <div className="container">
         <div className="content">
           {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val}/> : <div className="loader">Loading...</div>}
+          <div className="action-buttons">
+            <button className="approve-btn" onClick={handleApprove}>Approve</button>
+            <button className="reject-btn" onClick={handleReject}>Reject</button>
+          </div>
         </div>
         {imgCondition ? (
           <div className="pdf-view">
