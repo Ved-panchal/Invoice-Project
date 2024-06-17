@@ -71,28 +71,22 @@ function Temp() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    let newFiles =  await uploadPdf();
-    setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
-    // if (files.length > 0) {
-    //   setLoading(true);
-    //   setError(null);
-    //   const initialFilesState = setInitialFilesState(files);
-    //   for (let index = 0; index < files.length; index++) {
-    //     try {
-    //       const updatedFile = await getApiResponse(files[index]);
-    //       initialFilesState[index] = updatedFile;
-    //       setUploadedFiles([...initialFilesState]);
-    //     } catch (error) {
-    //       console.error("Error uploading document:", error);
-    //       setError("Error uploading document. Please try again.");
-    //     }
-    //   }
-    //   setLoading(false);
-    //   setFiles([]);
-    // } else {
-    //   console.error("No files selected.");
-    //   setError("No files selected. Please select files to upload.");
-    // }
+    if (files.length > 0) {
+      setError(null);
+      try {
+        setLoading(true);
+        let newFiles =  await uploadPdf();
+        setLoading(false);
+        setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+      } catch (error) {
+        console.error("Error uploading document:", error);
+        setError("Error uploading document. Please reload and try again.");
+      }
+      setFiles([]);
+    } else {
+      console.error("No files selected.");
+      setError("No files selected. Please select files to upload.");
+    }
   };
 
   const handleDelete = async (fileToDelete) => {

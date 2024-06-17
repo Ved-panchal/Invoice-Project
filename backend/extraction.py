@@ -140,18 +140,26 @@ def store_pdf_data(client, user_id, filename, STATIC_DIR):
             # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
             #     filename = await convert_image(filename)
 
-    file_id = process_file(client, filename, user_id)
+    new_file_id = process_file(client, filename, user_id)
     file_ext = filename.split('.')[-1]
+    file_id = filename.split('.')[0]
     file_location = STATIC_DIR / user_id / filename
 
-
     # Construct new filename using file_id and the original extension
-    new_filename = f"{file_id}.{file_ext}"
+    new_filename = f"{new_file_id}.{file_ext}"
     new_file_location = STATIC_DIR / user_id / new_filename
-
-    pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
-    pdf_obj = pdf_mapping
 
     # Rename the file
     os.rename(file_location, new_file_location)
-    return file_id
+    
+    update_operation = {
+        '$set': {
+            'pdfData.pdfId': new_file_id,
+            'pdfData.pdfStatus': 'Completed'
+        }
+    }
+    obj_id = ObjectId(file_id)
+    pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
+    pdf_mapping.update_one({'_id':obj_id}, update_operation)
+    
+    return new_file_id

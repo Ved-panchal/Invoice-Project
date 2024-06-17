@@ -17,6 +17,7 @@ function UploadDocumentPage() {
   });
 
   useEffect(() => {
+    // 2 is for user id when login is created then it should be replaced
     localStorage.setItem('user_id', '2');
     const user_id = localStorage.getItem('user_id');
     const get_pdfs = async () => {
@@ -62,7 +63,7 @@ function UploadDocumentPage() {
       const formData = new FormData();
       files.forEach((file) => formData.append('documents', file));
       const user_id = localStorage.getItem('user_id');
-      const response = await axios.post(`http://localhost:5500/uploadFiles/${user_id}`, formData, { // 2 is for user id when login is created then it should be replaced
+      const response = await axios.post(`http://localhost:5500/uploadFiles/${user_id}`, formData, { 
         headers: {
           'Content-Type': 'multipart/form-data',
         },
