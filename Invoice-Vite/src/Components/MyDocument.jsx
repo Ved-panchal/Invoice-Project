@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 const MyDocument = () => {
     // Extracting the 'fileName' parameter from the URL using useParams hook
     const { fileCode } = useParams();
-    const user_id = localStorage.getItem('user_id');
+    const userId = localStorage.getItem('userId');
     if(fileCode){
         var fileName = fileCode.substring(0, fileCode.length - 1);
         let extension_bit = fileCode.substring(fileCode.length - 1);
@@ -17,7 +17,7 @@ const MyDocument = () => {
     }
     return (
         <div>
-            {fileName && <PdfViewer pdfUrl={`http://localhost:5500/static/${user_id}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
+            {fileName && <PdfViewer pdfUrl={`http://localhost:5500/static/${userId}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
         </div>
     );
 };

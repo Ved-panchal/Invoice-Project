@@ -18,29 +18,19 @@ function Temp() {
     accept: "application/pdf, image/jpeg, image/png",
   });
 
-  const delay = () => {
-    return new Promise((resolve) => {
-      setTimeout(resolve, 5000);
-    });
-  };
-
-  const upload_pdf = async (file) => {
+  const uploadPdf = async () => {
     try {
       const formData = new FormData();
-      formData.append("document", file);
-      const response = await axios.post(
-        "http://localhost:5500/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      await delay();
-      return response;
+      files.forEach((file) => formData.append('documents', file));
+      const userId = localStorage.getItem('userId');
+      const response = await axios.post(`http://localhost:5500/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.result;
     } catch (error) {
-      console.error("Error uploading document:", error);
+      console.log('error uploading', error);
       throw error;
     }
   };
@@ -61,7 +51,7 @@ function Temp() {
 
   const getApiResponse = async (file) => {
     try {
-      const response = await upload_pdf(file);
+      const response = await uploadPdf(file);
       const fileId = response.data;
       return {
         pdfStatus: "Completed",
@@ -81,26 +71,28 @@ function Temp() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (files.length > 0) {
-      setLoading(true);
-      setError(null);
-      const initialFilesState = setInitialFilesState(files);
-      for (let index = 0; index < files.length; index++) {
-        try {
-          const updatedFile = await getApiResponse(files[index]);
-          initialFilesState[index] = updatedFile;
-          setUploadedFiles([...initialFilesState]);
-        } catch (error) {
-          console.error("Error uploading document:", error);
-          setError("Error uploading document. Please try again.");
-        }
-      }
-      setLoading(false);
-      setFiles([]);
-    } else {
-      console.error("No files selected.");
-      setError("No files selected. Please select files to upload.");
-    }
+    let newFiles =  await uploadPdf();
+    setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+    // if (files.length > 0) {
+    //   setLoading(true);
+    //   setError(null);
+    //   const initialFilesState = setInitialFilesState(files);
+    //   for (let index = 0; index < files.length; index++) {
+    //     try {
+    //       const updatedFile = await getApiResponse(files[index]);
+    //       initialFilesState[index] = updatedFile;
+    //       setUploadedFiles([...initialFilesState]);
+    //     } catch (error) {
+    //       console.error("Error uploading document:", error);
+    //       setError("Error uploading document. Please try again.");
+    //     }
+    //   }
+    //   setLoading(false);
+    //   setFiles([]);
+    // } else {
+    //   console.error("No files selected.");
+    //   setError("No files selected. Please select files to upload.");
+    // }
   };
 
   const handleDelete = async (fileToDelete) => {
@@ -120,10 +112,10 @@ function Temp() {
 
   useEffect(() => {
     const fetchUploadedFiles = async () => {
-    localStorage.setItem('user_id', '2');
-    const user_id = localStorage.getItem('user_id');
+    localStorage.setItem('userId', '2');
+    const userId = localStorage.getItem('userId');
     try {
-      let response = await axios.get(`http://localhost:5500/get_pdfs/${user_id}`);
+      let response = await axios.get(`http://localhost:5500/get_pdfs/${userId}`);
       let data = response.data;
       setUploadedFiles(data);
     } catch (error) {
@@ -138,6 +130,36 @@ function Temp() {
     if (!date || !isValid(new Date(date))) return "Invalid date";
     return format(new Date(date), "MMM dd, yyyy, hh:mm a");
   };
+
+  useEffect(() => {
+    const user_id = localStorage.getItem('user_id');
+
+    const socket = new WebSocket(`ws://localhost:5500/ws/${user_id}`);
+
+    // Listen for messages from the WebSocket server
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log("ws message",message)
+      // Update the uploadedFiles state based on the received message
+      setUploadedFiles((prevFiles) => {
+        const index = prevFiles.findIndex((file) => file.id === message.id);
+        if (index !== -1) {
+          return [
+            ...prevFiles.slice(0, index),
+            { ...prevFiles[index], ...message },
+            ...prevFiles.slice(index + 1),
+          ];
+        } else {
+          return prevFiles;
+        }
+      });
+    };
+
+    // Cleanup function to close WebSocket connection when component unmounts
+    return () => {
+      socket.close();
+    };
+  }, []);
 
   return (
     <div style={styles.page}>
@@ -196,6 +218,7 @@ function Temp() {
               </tr>
             </thead>
             <tbody>
+              {console.log(uploadedFiles)}
               {uploadedFiles.map((file, index) => (
                 <tr key={`pdf-${index}`} style={styles.tableRow}>
                   <td style={styles.tableCell}>

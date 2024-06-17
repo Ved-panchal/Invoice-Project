@@ -35,7 +35,7 @@ function UploadDocumentPage() {
     // Listen for messages from the WebSocket server
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log(message)
+      console.log("ws message",message)
       // Update the uploadedFiles state based on the received message
       // setUploadedFiles((prevFiles) => {
       //   const index = prevFiles.findIndex((file) => file.pdfName === message.pdfName);

@@ -5,6 +5,7 @@ from models import DataType, ImageUrls, TextData
 from pdf_utils import get_cords_of_word, get_pdf_data_from_pdfplumber,remove_comments_from_json
 from conversion import convert_doc
 import json, os
+from bson import ObjectId
 from database import mongo_conn
 
 # mongo_conn.get_pdf_data_collection() = mongo_conn.get_pdf_data_collection()
@@ -143,9 +144,13 @@ def store_pdf_data(client, user_id, filename, STATIC_DIR):
     file_ext = filename.split('.')[-1]
     file_location = STATIC_DIR / user_id / filename
 
+
     # Construct new filename using file_id and the original extension
     new_filename = f"{file_id}.{file_ext}"
     new_file_location = STATIC_DIR / user_id / new_filename
+
+    pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
+    pdf_obj = pdf_mapping
 
     # Rename the file
     os.rename(file_location, new_file_location)

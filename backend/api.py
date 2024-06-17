@@ -83,7 +83,8 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
             }
             result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
             pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
-            response.append(pdf_data)
+            pdf_data['pdfData']['id'] = pdf_data['_id']
+            response.append(pdf_data['pdfData'])
             file_ext = document.filename.split('.')[-1].lower()
             new_file_name = f'{pdf_data["_id"]}.{file_ext}'
             filenames.append(new_file_name)
@@ -151,7 +152,8 @@ def get_data_from_mongo(invoice_id: str):
 @app.get('/get_pdfs/{user_id}')
 def get_all_pdf_data_from_userid(user_id: int):
     response = []
-    for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}, {"_id": 0, "userId": 0}).sort([("_id", -1)]).limit(5):
+    for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).limit(5):
+        record["pdfData"]["id"] = convert_objectid(record["_id"])
         response.append(record)
     transformed_data = [item["pdfData"] for item in response]
     return transformed_data
