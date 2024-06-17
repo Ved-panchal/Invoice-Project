@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os, ssl, cloudinary, cloudinary.uploader, json, asyncio
+from datetime import datetime
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
@@ -75,6 +76,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
         for document in documents:
             pdf_data = {
                 "userId": int(user_id),
+                "createdAt": datetime.now(),
                 "pdfData":{
                     "pdfId":"",
                     "pdfName":document.filename,
@@ -84,6 +86,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
             result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
             pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
             pdf_data['pdfData']['id'] = pdf_data['_id']
+            pdf_data['pdfData']['createdAt'] = pdf_data['createdAt']
             response.append(pdf_data['pdfData'])
             file_ext = document.filename.split('.')[-1].lower()
             new_file_name = f'{pdf_data["_id"]}.{file_ext}'
@@ -128,6 +131,21 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
     except Exception as e:
         return JSONResponse(content={"message": "File upload failed", "error": str(e)})
 
+@app.post('/delete')
+async def delete_file(payload: dict):
+    mapping_obj_id = payload['fileId']
+    try:
+        print(mapping_obj_id)
+        data = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": ObjectId(mapping_obj_id)})
+        if data is not None:
+            pdfId = data['pdfData']['pdfId'][:-1]
+            mongo_conn.get_user_pdf_mapping_collection().delete_one({"_id": ObjectId(mapping_obj_id)})
+            mongo_conn.get_pdf_data_collection().delete_one({"_id": ObjectId(pdfId)})
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post('/delete_folder')
 async def delete_folder(folder_name: str):
     if not folder_name:
@@ -154,6 +172,7 @@ def get_all_pdf_data_from_userid(user_id: int):
     response = []
     for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).limit(5):
         record["pdfData"]["id"] = convert_objectid(record["_id"])
+        record["pdfData"]["createdAt"] = record["createdAt"]
         response.append(record)
     transformed_data = [item["pdfData"] for item in response]
     return transformed_data

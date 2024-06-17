@@ -92,11 +92,11 @@ function Temp() {
   const handleDelete = async (fileToDelete) => {
     try {
       // Only attempt to delete from the server if the file has been successfully uploaded
-      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading...") {
-        await axios.post("http://localhost:5500/delete", { fileId: fileToDelete.pdfId });
+      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
+        await axios.post("http://localhost:5500/delete", { fileId: fileToDelete.id });
       }
       setUploadedFiles((prevUploadedFiles) =>
-        prevUploadedFiles.filter((file) => file.pdfId !== fileToDelete.pdfId)
+        prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
       );
     } catch (error) {
       console.error("Error deleting document:", error);
