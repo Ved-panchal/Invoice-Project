@@ -62,6 +62,10 @@ class RemoteProcessClient(object):
             ),
             body=pdf)
 
+        # socket -> change pdf status to processing
+        # self.socket_manager.send_message(pdf, user_id)
+        # self.executor.submit(asyncio.run, self.socket_manager.send_message(pdf, user_id))
+
         while True:
             with self.lock:
                 if self.responses[corr_id] is not None:

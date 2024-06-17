@@ -12,20 +12,23 @@ def get_pdf_data_from_pdfplumber(pdf_path):
     Returns:
     - str: The concatenated text extracted from all pages of the PDF.
     """
-    data = ''
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            data += page.extract_text(
-                x_tolerance=3,
-                x_tolerance_ratio=None,
-                y_tolerance=3,
-                layout=False,
-                x_density=7.25,
-                y_density=13,
-                line_dir_render=None,
-                char_dir_render=None
-            )
-    return data
+    try:
+        data = ''
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                data += page.extract_text(
+                    x_tolerance=3,
+                    x_tolerance_ratio=None,
+                    y_tolerance=3,
+                    layout=False,
+                    x_density=7.25,
+                    y_density=13,
+                    line_dir_render=None,
+                    char_dir_render=None
+                )
+        return data
+    except Exception as e:
+        raise Exception(str(e))
 
 def get_cords_of_word(gpt_json_data: dict, pdf_path):
     """
@@ -106,11 +109,14 @@ def process_pdf(pdf_path, output_folder, filename):
     return uploaded_image_urls
 
 
-def remove_comments_from_json(json_string):
-    start_index = json_string.find('{')
-    end_index = json_string.rfind('}')
-    json_string = json_string[start_index:end_index+1]
+def remove_comments_from_json(json_string: str):
+    try:
+        start_index = json_string.find('{')
+        end_index = json_string.rfind('}')
+        json_string = json_string[start_index:end_index+1]
 
-    # Use a regular expression to remove comments starting with //
-    json_string = re.sub(r'//.*?\n', '', json_string)
-    return json_string
+        # Use a regular expression to remove comments starting with //
+        json_string = re.sub(r'//.*?\n', '', json_string)
+        return json_string
+    except Exception as e:
+        raise Exception(str(e))

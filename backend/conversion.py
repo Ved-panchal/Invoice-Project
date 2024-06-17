@@ -23,8 +23,8 @@ async def convert_image(filename, output_format='JPEG') -> str:
         filename[-1] = 'JPEG'
         return '.'.join(filename)
     except Exception as e:
-        print(f"Error converting image: {e}")
-        return ''
+        raise Exception(f"Error converting image: {e}")
+        # return ''
     
 
 def convert_doc(filename):
@@ -34,12 +34,13 @@ def convert_doc(filename):
     :param filename: Path to the input document file.
     :return: Filename of the converted PDF file.
     """
-    # Construct the input and output paths
-    input_path = os.path.join('static', filename)
-    output_filename = f"{os.path.splitext(filename)[0]}.pdf"
-    output_path = os.path.join('static', output_filename)
 
     try:
+        # Construct the input and output paths
+        input_path = os.path.join('static', filename)
+        output_filename = f"{os.path.splitext(filename)[0]}.pdf"
+        output_path = os.path.join('static', output_filename)
+
         # Convert the document file to PDF
         convert(input_path, output_path)
 
@@ -50,5 +51,5 @@ def convert_doc(filename):
         return output_filename
     except Exception as e:
         # Handle any errors that occur during conversion
-        print(f"Error converting document: {e}")
-        return ''
+        raise Exception(f"Error converting document: {e}")
+        # return ''

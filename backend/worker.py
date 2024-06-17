@@ -39,7 +39,7 @@ class PikaWorker:
 
             # Process PDF here
             response = store_pdf_data(client, props.headers['user_id'], body.decode(), STATIC_DIR)
-            response_json = json.dumps({'pdfStatus':'Completed','pdfId':response, 'id': body.decode().split('.')[0]})
+            response_json = json.dumps({'pdfStatus':'Completed', 'pdfId': response, 'id': body.decode().split('.')[0]})
         except Exception as e:
             print(f'Error processing task.\nDetails: {e}')
             response_json = json.dumps({'error': str(e),'pdfStatus':'Exception'})

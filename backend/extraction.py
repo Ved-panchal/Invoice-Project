@@ -21,26 +21,30 @@ def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
     Returns:
     - str: The extracted invoice data in JSON format.
     """
-    if data_type == DataType.IMAGEURL:
-        prompt = prepare_prompt()
-        messages = [{"role": "user", "content": [prompt]}]
-        for url in text:
-            messages[0]["content"].append({"type": "image_url", "image_url": {"url": url}})
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            temperature=0
-        )
-    else:
-        prompt = prepare_prompt(text)
-        messages = [{"role": "user", "content": prompt}]
-        response = client.chat.completions.create(
-            # model="gpt-3.5-turbo",
-            model="Qwen/Qwen1.5-110B-Chat",
-            messages=messages,
-            temperature=0
-        )
-    return response.choices[0].message.content
+    try:
+        if data_type == DataType.IMAGEURL:
+            prompt = prepare_prompt()
+            messages = [{"role": "user", "content": [prompt]}]
+            for url in text:
+                messages[0]["content"].append({"type": "image_url", "image_url": {"url": url}})
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0
+            )
+        else:
+            prompt = prepare_prompt(text)
+            messages = [{"role": "user", "content": prompt}]
+            response = client.chat.completions.create(
+                # model="gpt-3.5-turbo",
+                model="Qwen/Qwen1.5-110B-Chat",
+                messages=messages,
+                temperature=0
+            )
+        return response.choices[0].message.content
+    
+    except Exception as e:
+        raise Exception(str(e))
 
 async def get_invoice_data(client: OpenAI, image_urls) -> dict:
     """
@@ -98,68 +102,74 @@ def get_invoice_data_text(client, pdf_path: TextData) -> list:
             res_list.insert(0, json_data)
             return res_list
         else:
-            print('Could not fetch data from API.')
+            raise Exception('Could not fetch data from API.')
     except Exception as e:
         print("Error requesting api from extraction/get_invoice_data_text.\n",e)
         raise HTTPException(status_code=500, detail=str(e))
     
 def process_file(client, filename: str, user_id: str) -> str:
-    file_ext = filename.split('.')[-1].lower()
-    if file_ext == 'pdf':
-        json_data =  get_invoice_data_text(client, f"./static/{user_id}/{filename}")
-        data = {'data' : json_data}
-        pdf_data_col = mongo_conn.get_pdf_data_collection()
-        result = pdf_data_col.insert_one(data)
-        if result:
-            result = str(result.inserted_id) + "0"
-        else:
-            raise HTTPException(status_code=400, detail="Database insertion error")
-        return result
+    try:
+        file_ext = filename.split('.')[-1].lower()
+        if file_ext == 'pdf':
+            json_data =  get_invoice_data_text(client, f"./static/{user_id}/{filename}")
+            data = {'data' : json_data}
+            pdf_data_col = mongo_conn.get_pdf_data_collection()
+            result = pdf_data_col.insert_one(data)
+            if result:
+                result = str(result.inserted_id) + "0"
+            else:
+                raise HTTPException(status_code=400, detail="Database insertion error")
+            return result
 
-    # elif file_ext == "jpeg":
-    #     if filename:
-    #         (uploaded_image_urls, _) = await process_image(filename)
-    #         json_data = await get_invoice_data(client, uploaded_image_urls)
-    #         data = {'data' : [json_data]}
-    #         result = pdf_data_collection.insert_one(data)
-    #         if result:
-    #             result = str(result.inserted_id) + "1"
-    #         else:
-    #             raise HTTPException(status_code=400, detail="Database insertion error")
-    #         return result
-    #     else:
-    #         raise HTTPException(status_code=400, detail="Can not convert image to JPEG")
-    else:
-        raise HTTPException(status_code=400, detail='Unsupported file format')
+        # elif file_ext == "jpeg":
+        #     if filename:
+        #         (uploaded_image_urls, _) = await process_image(filename)
+        #         json_data = await get_invoice_data(client, uploaded_image_urls)
+        #         data = {'data' : [json_data]}
+        #         result = pdf_data_collection.insert_one(data)
+        #         if result:
+        #             result = str(result.inserted_id) + "1"
+        #         else:
+        #             raise HTTPException(status_code=400, detail="Database insertion error")
+        #         return result
+        #     else:
+        #         raise HTTPException(status_code=400, detail="Can not convert image to JPEG")
+        else:
+            raise HTTPException(status_code=400, detail='Unsupported file format')
+    except Exception as e:
+        raise Exception(str(e))
     
 def store_pdf_data(client, user_id, filename, STATIC_DIR):
-    file_ext = filename.split('.')[-1].lower()
-    if file_ext in ['doc', 'docx']:
-        filename = convert_doc(filename)
+    try:
+        file_ext = filename.split('.')[-1].lower()
+        if file_ext in ['doc', 'docx']:
+            filename = convert_doc(filename)
 
-            # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
-            #     filename = await convert_image(filename)
+                # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
+                #     filename = await convert_image(filename)
 
-    new_file_id = process_file(client, filename, user_id)
-    file_ext = filename.split('.')[-1]
-    file_id = filename.split('.')[0]
-    file_location = STATIC_DIR / user_id / filename
+        new_file_id = process_file(client, filename, user_id)
+        file_ext = filename.split('.')[-1]
+        file_id = filename.split('.')[0]
+        file_location = STATIC_DIR / user_id / filename
 
-    # Construct new filename using file_id and the original extension
-    new_filename = f"{new_file_id}.{file_ext}"
-    new_file_location = STATIC_DIR / user_id / new_filename
+        # Construct new filename using file_id and the original extension
+        new_filename = f"{new_file_id}.{file_ext}"
+        new_file_location = STATIC_DIR / user_id / new_filename
 
-    # Rename the file
-    os.rename(file_location, new_file_location)
-    
-    update_operation = {
-        '$set': {
-            'pdfData.pdfId': new_file_id,
-            'pdfData.pdfStatus': 'Completed'
+        # Rename the file
+        os.rename(file_location, new_file_location)
+        
+        update_operation = {
+            '$set': {
+                'pdfData.pdfId': new_file_id,
+                'pdfData.pdfStatus': 'Completed'
+            }
         }
-    }
-    obj_id = ObjectId(file_id)
-    pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
-    pdf_mapping.update_one({'_id':obj_id}, update_operation)
-    
-    return new_file_id
+        obj_id = ObjectId(file_id)
+        pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
+        pdf_mapping.update_one({'_id':obj_id}, update_operation)
+        
+        return new_file_id
+    except Exception as e:
+        raise Exception(str(e))
