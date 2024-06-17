@@ -10,8 +10,8 @@ function App() {
   return (
     <Router>
     <Routes>
-        <Route path="/"  element={<UploadInvoicePage />} />
-        <Route path="/temp"  element={<Temp />} />
+        {/* <Route path="/"  element={<UploadInvoicePage />} /> */}
+        <Route path="/"  element={<Temp />} />
         {/* <Route path="/invoice-details" element={<DisplayInvoiceDataPage />} /> */}
         <Route path="/my-documents/:fileCode" element={<MyDocument />} />
         <Route path="/loader" element={<div style={{
