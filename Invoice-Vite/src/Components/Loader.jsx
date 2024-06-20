@@ -1,17 +1,17 @@
-import { reuleaux, quantum } from 'ldrs'
+import { reuleaux, quantum, bouncy } from 'ldrs'
 import React from 'react';
 
 const Loader = () => {
-    quantum.register()
+    // quantum.register()
+    bouncy.register()
     return (
-        <div className='loader'>
-            <l-quantum
-            size="111"
-            speed="2.17" 
-            color="black" 
-            ></l-quantum>
-        </div>
+            <l-bouncy
+            size="20"
+            speed="0.8" 
+            color="#000" 
+            ></l-bouncy>
     )
 }
+
 
 export default Loader;

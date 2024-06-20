@@ -2,6 +2,8 @@ import axios from "axios";
 import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
+import Loader from "./Loader";
+import "./CSS/Temp.css";
 
 function Temp() {
   const [files, setFiles] = useState([]);
@@ -164,7 +166,6 @@ function Temp() {
     );
   };
   
-
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
@@ -173,10 +174,10 @@ function Temp() {
           <div {...getRootProps({ style: styles.dropzone })}>
             <input {...getInputProps()} />
             {isDragActive ? (
-              <p>Drop the files here ...</p>
+              <p style={styles.whitefont}>Drop the files here ...</p>
             ) : (
-              <p>
-                Drag 'n' drop PDF, JPEG, or PNG files here, or click to select
+              <p style={styles.whitefont}>
+                Drag 'n' drop PDF, DOC or DOCX files here, or click to select
                 them
               </p>
             )}
@@ -222,23 +223,11 @@ function Temp() {
               </tr>
             </thead>
             <tbody>
-              {console.log(uploadedFiles)}
               {uploadedFiles.map((file, index) => (
                 <tr key={`pdf-${index}`} style={styles.tableRow}>
                   <td style={styles.tableCell}>
-                    <span
-                      style={{
-                        ...styles.status,
-                        backgroundColor:
-                          file.pdfStatus === "Completed"
-                            ? "#28a745"
-                            : file.pdfStatus === "Pending"
-                            ? "#ffc107"
-                            : "#dc3545",
-                      }}
-                    >
-                      {file.pdfStatus}
-                    </span>
+                    {file.pdfStatus === 'Pending' && <div style={styles.pendingStatus}><span>{file.pdfStatus}  </span><Loader /></div>}
+                    {file.pdfStatus === 'Completed' && <div style={styles.completeStatus}>{file.pdfStatus}</div>}
                   </td>
                   <td style={styles.tableCell}>{file.pdfName}</td>
                   <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
@@ -251,11 +240,11 @@ function Temp() {
                       >
                         Delete
                       </button>
-                      {file.pdfStatus === "Completed" && (
+                      {file.pdfStatus === 'Completed' && (
                         <button
                           style={styles.viewButton}
                           onClick={() =>
-                            window.open(`/my-documents/${file.pdfId}`, "_blank")
+                            window.open(`/my-documents/${file.pdfId}`, '_blank')
                           }
                         >
                           View
@@ -271,132 +260,173 @@ function Temp() {
       </div>
     </div>
   );
-}
+};
 
 const styles = {
   page: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    height: "100vh",
-    backgroundColor: "#f7f7f7",
-    padding: "20px",
-    textAlign: "center",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#2c3e50',
+    padding: '20px',
+    textAlign: 'center',
+    // letter-spacing: 1px;
+    letterSpacing:'1px',
+    fontFamily: "'Poppins', sans-serif",
   },
   heading: {
-    marginBottom: "20px",
-    fontSize: "36px",
-    fontWeight: "bold",
+    marginBottom: '20px',
+    fontSize: '36px',
+    fontWeight: 'bold',
+    color: '#ecf0f1',
+    fontFamily: "'Poppins', sans-serif",
   },
   container: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    width: "80%",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '80%',
+    fontFamily: "'Poppins', sans-serif",
   },
   form: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    width: "100%",
-    maxWidth: "700px",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: '700px',
+    fontFamily: "'Poppins', sans-serif",
   },
   dropzone: {
-    width: "100%",
-    padding: "60px",
-    borderWidth: "2px",
-    borderColor: "#cccccc",
-    borderStyle: "dashed",
-    borderRadius: "5px",
-    backgroundColor: "#ffffff",
-    color: "#333333",
-    textAlign: "center",
-    cursor: "pointer",
-    marginBottom: "20px",
+    width: '100%',
+    padding: '60px',
+    borderWidth: '2px',
+    borderColor: '#7f8c8d',
+    borderStyle: 'dashed',
+    borderRadius: '5px',
+    backgroundColor: '#34495e',
+    color: '#fff',
+    textAlign: 'center',
+    cursor: 'pointer',
+    marginBottom: '20px',
+    fontFamily: "'Poppins', sans-serif",
+  },
+  whitefont: {
+    color: '#ffffffaf',
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
   },
   fileDetailsContainer: {
-    width: "100%",
-    maxHeight: "200px",
-    overflowY: "auto",
-    marginBottom: "10px",
+    width: '100%',
+    maxHeight: '200px',
+    overflowY: 'auto',
+    marginBottom: '10px',
+    fontFamily: "'Poppins', sans-serif",
   },
   fileDetails: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: "5px",
-    padding: "5px 10px",
-    backgroundColor: "#e9e9e9",
-    borderRadius: "5px",
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '5px',
+    padding: '5px 10px',
+    backgroundColor: '#95a5a6',
+    borderRadius: '5px',
+    fontFamily: "'Poppins', sans-serif",
   },
   fileName: {
-    fontSize: "14px",
-    marginRight: "10px",
+    fontSize: '14px',
+    marginRight: '10px',
+    color: '#2c3e50',
+    fontFamily: "'Poppins', sans-serif",
   },
   deleteButton: {
-    padding: "5px 10px",
-    fontSize: "14px",
-    backgroundColor: "#dc3545",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
+    padding: '5px 10px',
+    fontSize: '14px',
+    backgroundColor: '#e74c3c',
+    color: '#ecf0f1',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
   },
   button: {
-    padding: "10px 20px",
-    fontSize: "16px",
-    backgroundColor: "#007bff",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
+    padding: '10px 20px',
+    fontSize: '16px',
+    backgroundColor: '#028391',
+    color: '#ecf0f1',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
   },
   error: {
-    color: "#dc3545",
-    marginBottom: "10px",
+    color: '#e74c3c',
+    marginBottom: '10px',
+    fontFamily: "'Poppins', sans-serif",
   },
   tableContainer: {
-    marginTop: "20px",
-    width: "100%",
-    overflowX: "auto",
+    marginTop: '20px',
+    width: '100%',
+    overflowX: 'auto',
+    fontFamily: "'Poppins', sans-serif",
   },
   table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    backgroundColor: "#ffffff",
+    width: '100%',
+    borderCollapse: 'collapse',
+    backgroundColor: '#34495e',
+    fontFamily: "'Poppins', sans-serif",
   },
   tableHeader: {
-    padding: "10px",
-    backgroundColor: "#007bff",
-    color: "#ffffff",
-    border: "1px solid #dddddd",
+    padding: '15px',
+    // backgroundColor: '#028391',
+    color: '#ecf0f1',
+    fontFamily: "'Poppins', sans-serif",
+    // border: '1px solid #16a085',
   },
   tableRow: {
-    borderBottom: "1px solid #dddddd",
+    // borderBottom: '1px solid #16a085',
+    fontFamily: "'Poppins', sans-serif",
   },
   tableCell: {
-    padding: "10px",
-    textAlign: "center",
-    border: "1px solid #dddddd",
+    padding: '15px',
+    textAlign: 'center',
+    color: '#ecf0f1',
+    fontFamily: "'Poppins', sans-serif",
+    // border: '1px solid #16a085',
   },
-  status: {
-    padding: "5px 10px",
-    color: "#ffffff",
-    borderRadius: "5px",
+  completeStatus: {
+    width:'100%',
+    padding: '5px 10px',
+    color: '#004208',
+    borderRadius: '5px',
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
+    backgroundColor: "#03C988"
+  },
+  pendingStatus: {
+    width:'100%',
+    padding: '5px 10px',
+    color: '#004208',
+    borderRadius: '5px',
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
+    backgroundColor: '#FFC700'
   },
   actions: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "10px",
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '10px',
+    fontFamily: "'Poppins', sans-serif",
   },
   viewButton: {
-    padding: "5px 10px",
-    fontSize: "14px",
-    backgroundColor: "#28a745",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
+    padding: '5px 10px',
+    fontSize: '14px',
+    backgroundColor: '#27ae60',
+    color: '#ecf0f1',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontFamily: "'Poppins', sans-serif",
   },
 };
 

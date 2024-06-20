@@ -5,6 +5,7 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import axios from 'axios';
 import InvoiceForm from './InvoiceForm';
 import './CSS/PdfViewer.css';
+import { useNavigate } from 'react-router-dom';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -13,10 +14,11 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const [numPages, setNumPages] = useState(0);
   const [data, setData] = useState([]);
   const [imgCondition, setImageCondition] = useState(false);
-  const scale_val = 1.92;
+  const navigate = useNavigate();
+  const scale_val = 1.9;
 
   const handleBack = () => {
-    window.location = '/';
+    navigate('/')
   };
 
   const handleApprove = async () => {

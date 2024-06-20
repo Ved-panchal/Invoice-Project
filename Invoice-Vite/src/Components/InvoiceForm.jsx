@@ -2,8 +2,14 @@ import React, { useEffect, useState } from 'react';
 import './CSS/InvoiceForm.css';
 
 const InvoiceForm = ({ invoiceData, scale }) => {
-  const { CardCode, TaxDate, DocDate, DocDueDate, CardName, DiscountPercent, DocumentLines } = invoiceData[0];
+  var { CardCode, TaxDate, DocDate, DocDueDate, CardName, DiscountPercent, DocumentLines } = invoiceData[0];
   const data_arr = invoiceData.slice(1, invoiceData.length);
+  const [cardCode, setCardCode] = useState(CardCode);
+  const [taxDate, setTaxDate] = useState(TaxDate);
+  const [docDueDate, setDocDueDate] = useState(DocDueDate);
+  const [discountPercent, setDiscountPercent] = useState(DiscountPercent);
+  const [cardName, setCardName] = useState(CardName);
+  const [docDate, setDocDate] = useState(DocDate);
   const [documentLines, setDocumentLines] = useState(DocumentLines);
   const [selectedRows, setSelectedRows] = useState([]);
   const [image_canvas, setImage_canvas] = useState([]);
@@ -133,7 +139,12 @@ const InvoiceForm = ({ invoiceData, scale }) => {
 
   useEffect(() => {
     validateInputs();
-  }, [documentLines]);
+  }, [cardCode,
+    taxDate,
+    docDueDate,
+    discountPercent,
+    cardName,
+    docDate,documentLines]);
 
   return (
     <div className="form-section">
@@ -142,27 +153,27 @@ const InvoiceForm = ({ invoiceData, scale }) => {
         <div className="invoice-header">
           <div className="form-group">
             <label htmlFor="CardCode">Vendor ID:</label>
-            <input type="text" id="CardCode" value={CardCode} />
+            <input type="text" id="CardCode" value={cardCode || ""}  onChange={e => setCardCode(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="CardName">Vendor Name:</label>
-            <input type="text" id="CardName" value={CardName} />
+            <input type="text" id="CardName" value={cardName || ""} onChange={e => setCardName(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="TaxDate">Tax Date:</label>
-            <input type="text" id="TaxDate" value={TaxDate} />
+            <input type="text" id="TaxDate" value={taxDate || ""} onChange={e => setTaxDate(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="DocDate">Document Date:</label>
-            <input type="text" id="DocDate" value={DocDate} />
+            <input type="text" id="DocDate" value={docDate || ""} onChange={e => setDocDate(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="DocDueDate">Due Date:</label>
-            <input type="text" id="DocDueDate" value={DocDueDate} />
+            <input type="text" id="DocDueDate" value={docDueDate || ""} onChange={e => setDocDueDate(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="DiscountPercent">Discount %:</label>
-            <input type="text" id="DiscountPercent" value={DiscountPercent} />
+            <input type="text" id="DiscountPercent" value={discountPercent || ""} onChange={e => setDiscountPercent(e.target.value)} />
           </div>
         </div>
       </header>

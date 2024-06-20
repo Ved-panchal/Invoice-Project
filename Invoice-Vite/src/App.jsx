@@ -1,18 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import UploadInvoicePage from "./Components/UploadInvoicePage";
-// import DisplayInvoiceDataPage from './Components/DisplayInvoiceDataPage';
 import MyDocument from './Components/MyDocument';
 import Loader from './Components/Loader';
-import Temp from './Components/Temp';
 
 function App() {
   return (
     <Router>
     <Routes>
-        {/* <Route path="/"  element={<UploadInvoicePage />} /> */}
-        <Route path="/"  element={<Temp />} />
-        {/* <Route path="/invoice-details" element={<DisplayInvoiceDataPage />} /> */}
+        <Route path="/"  element={<UploadInvoicePage />} />
         <Route path="/my-documents/:fileCode" element={<MyDocument />} />
         <Route path="/loader" element={<div style={{
     position: 'fixed',
