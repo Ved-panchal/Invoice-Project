@@ -1,19 +1,18 @@
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks
+from fastapi import FastAPI, File, HTTPException, UploadFile, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+
 import os, ssl, cloudinary, cloudinary.uploader, json, asyncio
 from datetime import datetime
 from decouple import config
 from pathlib import Path
 from bson import ObjectId
-from fastapi import WebSocket, WebSocketDisconnect
+
 from web_socket import socket_manager
 from database import mongo_conn
 from queue_service import queue_manager
-
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -28,15 +27,7 @@ cloudinary.config(
 # Static folder
 STATIC_DIR = Path("static")
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    print('app started ...')
-    # mongo_conn.connect()
-
-    yield
-    print('app closed ...')
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 # Allow cross origin
 app.add_middleware(
@@ -71,8 +62,6 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
         if not user_dir.exists():
             os.makedirs(user_dir)
 
-        # Insert initial data for all PDFs
-        inserted_ids = []
         for document in documents:
             pdf_data = {
                 "userId": int(user_id),
@@ -96,11 +85,9 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
             with open(file_location, "wb") as f:
                 f.write(document.file.read())
 
-
         # Schedule the upload_files_to_queue task as a background task
         background_tasks.add_task(upload_files_to_queue, filenames, user_id)
         # upload_files_to_queue(filenames, user_id)
-
 
     except Exception as e:
         print("Error uploading files:", e)
@@ -108,22 +95,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
     return {"success": True, "result": response}
 
 def upload_files_to_queue(filenames: list[str], user_id: str):
-# async def upload_files_to_queue(filenames: list[str], user_id: str):
     try:
-        # for filename in filenames:
-        #     file_id = await store_pdf_data(user_id, filename)
-
-        # rpc_client = RpcClient()
-
-        # def handle_response(response):
-        #     print(f'response: {response}')
-
-        # rpc_client.call({
-        #     'user_id': user_id,
-        #     'pdf_paths': filenames
-        # }, handle_response)
-
-        # # print(f'user_id: {user_id}\nresponse from worker: {response}')
         queue_manager.call(filenames, user_id)
         # await queue_manager.call(filenames, user_id)
         print("message: ", "File uploaded successfully")
@@ -131,18 +103,23 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
     except Exception as e:
         return JSONResponse(content={"message": "File upload failed", "error": str(e)})
 
-@app.post('/delete')
+@app.post('/delete_pdf')
 async def delete_file(payload: dict):
     mapping_obj_id = payload['fileId']
     try:
-        print(mapping_obj_id)
         data = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": ObjectId(mapping_obj_id)})
         if data is not None:
-            pdfId = data['pdfData']['pdfId'][:-1]
+            user_id = data['userId']
+            pdf_id = data['pdfData']['pdfId'][:-1]
+
             mongo_conn.get_user_pdf_mapping_collection().delete_one({"_id": ObjectId(mapping_obj_id)})
-            mongo_conn.get_pdf_data_collection().delete_one({"_id": ObjectId(pdfId)})
+            if pdf_id:
+                # delete from static folder here
+                file_path: Path = STATIC_DIR / user_id / (pdf_id + "0.pdf")
+                if file_path.exists():
+                    os.remove(file_path)
+                mongo_conn.get_pdf_data_collection().delete_one({"_id": ObjectId(pdf_id)})
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -161,21 +138,27 @@ async def delete_folder(folder_name: str):
 
 @app.get('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str):
-    data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
+    try:
+        data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
 
-    if data:
-        data = convert_objectid(data)
-    return data
+        if data:
+            data = convert_objectid(data)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/get_pdfs/{user_id}')
 def get_all_pdf_data_from_userid(user_id: int):
-    response = []
-    for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).limit(5):
-        record["pdfData"]["id"] = convert_objectid(record["_id"])
-        record["pdfData"]["createdAt"] = record["createdAt"]
-        response.append(record)
-    transformed_data = [item["pdfData"] for item in response]
-    return transformed_data
+    try:
+        response = []
+        for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).limit(5):
+            record["pdfData"]["id"] = convert_objectid(record["_id"])
+            record["pdfData"]["createdAt"] = record["createdAt"]
+            response.append(record)
+        transformed_data = [item["pdfData"] for item in response]
+        return transformed_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post('/insert_mapping_data')
 def insert_mapping_data(payload: dict):
@@ -186,18 +169,20 @@ def insert_mapping_data(payload: dict):
             raise HTTPException(status_code=400, detail="Mapping data insertion error")
         return inserted_id
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 def convert_objectid(doc):
-    if isinstance(doc, dict):
-        return {key: convert_objectid(value) for key, value in doc.items()}
-    elif isinstance(doc, list):
-        return [convert_objectid(item) for item in doc]
-    elif isinstance(doc, ObjectId):
-        return str(doc)
-    else:
-        return doc
+    try:
+        if isinstance(doc, dict):
+            return {key: convert_objectid(value) for key, value in doc.items()}
+        elif isinstance(doc, list):
+            return [convert_objectid(item) for item in doc]
+        elif isinstance(doc, ObjectId):
+            return str(doc)
+        else:
+            return doc
+    except Exception as e:
+        raise Exception(f'Error converting object_id\nDetails: {e}\nPlease contact administrator.')
 
 if __name__ == "__main__":
     import uvicorn
