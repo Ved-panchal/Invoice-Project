@@ -1,4 +1,5 @@
-import pika, sys, json
+import pika, sys, json, time
+from pika.exceptions import AMQPConnectionError, ChannelWrongStateError
 from extraction import store_pdf_data
 from together import Together
 from decouple import config
@@ -44,7 +45,6 @@ class PikaWorker:
             print(f'Error processing task.\nDetails: {e}')
             response_json = json.dumps({'error': str(e),'pdfStatus':'Exception'})
 
-
         try:
             print(f'task completed')
             self.channel.basic_publish(exchange='',
@@ -53,13 +53,23 @@ class PikaWorker:
                 body=response_json)
             ch.basic_ack(delivery_tag=method.delivery_tag)
             print('Response sent...')
+        except ConnectionResetError as cre:
+            print(f'Connection error.\nDetails: {cre}')
+            # Start the worker again...
+            raise
+
         except Exception as e:
             print(f'Error sending response.\nDetails: {e}')
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
 def main():
-    pika_worker = PikaWorker()
-    pika_worker.start()
+    while True:
+        try:
+            pika_worker = PikaWorker()
+            pika_worker.start()
+        except (AMQPConnectionError, ConnectionResetError, ConnectionError, ChannelWrongStateError) as e:
+            print(f"Connection error: {e}. Retrying in 5 seconds...")
+            time.sleep(5)
 
 if __name__ == '__main__':
     main()

@@ -115,11 +115,12 @@ async def delete_file(payload: dict):
             mongo_conn.get_user_pdf_mapping_collection().delete_one({"_id": ObjectId(mapping_obj_id)})
             if pdf_id:
                 # delete from static folder here
-                file_path: Path = STATIC_DIR / user_id / (pdf_id + "0.pdf")
+                file_path: Path = STATIC_DIR / str(user_id) / (pdf_id + "0.pdf")
                 if file_path.exists():
                     os.remove(file_path)
                 mongo_conn.get_pdf_data_collection().delete_one({"_id": ObjectId(pdf_id)})
     except Exception as e:
+        print(f'Error: {str(e)}')
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -147,16 +148,26 @@ def get_data_from_mongo(invoice_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get('/get_pdfs/{user_id}')
-def get_all_pdf_data_from_userid(user_id: int):
+@app.post('/get_pdfs/{user_id}')
+def get_page_data_from_userid(user_id: int, payload: dict):
     try:
+        page = payload['page'] or 1
+        count = payload['count'] or 5
         response = []
-        for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).limit(5):
+        for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).skip((page - 1) * count).limit(count):
             record["pdfData"]["id"] = convert_objectid(record["_id"])
             record["pdfData"]["createdAt"] = record["createdAt"]
             response.append(record)
         transformed_data = [item["pdfData"] for item in response]
         return transformed_data
+    except Exception as e:
+        print(str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get('/get_total_pages/{user_id}')
+def get_total_pages(user_id: int):
+    try:
+        return mongo_conn.get_user_pdf_mapping_collection().count_documents({"userId": user_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

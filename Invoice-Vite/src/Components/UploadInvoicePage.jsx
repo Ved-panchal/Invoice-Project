@@ -97,7 +97,7 @@ function UploadInvoicePage() {
     try {
       // Only attempt to delete from the server if the file has been successfully uploaded
       if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
-        await axios.post("http://localhost:5500/delete", { fileId: fileToDelete.id });
+        await axios.post("http://localhost:5500/delete_pdf", { fileId: fileToDelete.id });
       }
       setUploadedFiles((prevUploadedFiles) =>
         prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
@@ -113,7 +113,7 @@ function UploadInvoicePage() {
     localStorage.setItem('userId', '2');
     const userId = localStorage.getItem('userId');
     try {
-      let response = await axios.get(`http://localhost:5500/get_pdfs/${userId}`);
+      let response = await axios.post(`http://localhost:5500/get_pdfs/${userId}`, {'page':1, 'count':5});
       let data = response.data;
       setUploadedFiles(data);
     } catch (error) {
