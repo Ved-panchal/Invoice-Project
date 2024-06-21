@@ -51,6 +51,7 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     height: 7vh;
 }
 
+
 .navbar button {
     background-color: transparent;
     color: #fff;
@@ -59,8 +60,10 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
 }
 
 .navbar h1 {
+    width: 100%;
     margin: 0;
     color: #fff;
+    text-align: center;
 }
 
 /* Custom scrollbar styles */

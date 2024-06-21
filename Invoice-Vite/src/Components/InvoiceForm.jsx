@@ -11,7 +11,6 @@ const InvoiceForm = ({ invoiceData, scale }) => {
   const [cardName, setCardName] = useState(CardName);
   const [docDate, setDocDate] = useState(DocDate);
   const [documentLines, setDocumentLines] = useState(DocumentLines);
-  const [selectedRows, setSelectedRows] = useState([]);
   const [image_canvas, setImage_canvas] = useState([]);
 
   useEffect(() => {
@@ -19,10 +18,10 @@ const InvoiceForm = ({ invoiceData, scale }) => {
       const canvases = document.querySelectorAll('canvas');
       let arr = [];
       canvases.forEach(canvas => {
-        arr.push(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height))
-      })
+        arr.push(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
+      });
       setImage_canvas(arr);
-    }
+    };
 
     const handleFocus = (event) => {
       if (document.querySelectorAll('canvas').length === 0) {
@@ -47,7 +46,6 @@ const InvoiceForm = ({ invoiceData, scale }) => {
                 let canvas_height = current_canvas.getBoundingClientRect().height;
                 let document_height = current_canvas.height;
                 let cord_document_top = ((document_height * cord.top) / canvas_height) * scale;
-
                 document.querySelector('div.pdf-view').scrollTo({ top: (cord_document_top + canvas_height * index), behavior: "smooth" });
                 flag = true;
               }
@@ -107,23 +105,15 @@ const InvoiceForm = ({ invoiceData, scale }) => {
     setDocumentLines([...documentLines, { ItemCode: '', Quantity: '', UnitPrice: '', TaxCode: '', cords: [] }]);
   };
 
-  const handleDeleteRows = () => {
-    setDocumentLines(documentLines.filter((_, index) => !selectedRows.includes(index)));
-    setSelectedRows([]);
+  const handleDeleteRow = (index) => {
+    const newDocumentLines = documentLines.filter((_, idx) => idx !== index);
+    setDocumentLines(newDocumentLines);
   };
 
   const handleInputChange = (index, field, value) => {
     const newDocumentLines = [...documentLines];
     newDocumentLines[index][field] = value;
     setDocumentLines(newDocumentLines);
-  };
-
-  const handleSelectRow = (index) => {
-    if (selectedRows.includes(index)) {
-      setSelectedRows(selectedRows.filter(rowIndex => rowIndex !== index));
-    } else {
-      setSelectedRows([...selectedRows, index]);
-    }
   };
 
   const validateInputs = () => {
@@ -139,12 +129,18 @@ const InvoiceForm = ({ invoiceData, scale }) => {
 
   useEffect(() => {
     validateInputs();
-  }, [cardCode,
-    taxDate,
-    docDueDate,
-    discountPercent,
-    cardName,
-    docDate,documentLines]);
+  }, [cardCode, taxDate, docDueDate, discountPercent, cardName, docDate, documentLines]);
+
+  const handleMouseEnter = (e) => {
+    const video = e.currentTarget.querySelector('video');
+    video.play();
+  };
+
+  const handleMouseLeave = (e) => {
+    const video = e.currentTarget.querySelector('video');
+    video.pause();
+    video.currentTime = 0; // Reset to the beginning
+  };
 
   return (
     <div className="form-section">
@@ -153,7 +149,7 @@ const InvoiceForm = ({ invoiceData, scale }) => {
         <div className="invoice-header">
           <div className="form-group">
             <label htmlFor="CardCode">Vendor ID:</label>
-            <input type="text" id="CardCode" value={cardCode || ""}  onChange={e => setCardCode(e.target.value)} />
+            <input type="text" id="CardCode" value={cardCode || ""} onChange={e => setCardCode(e.target.value)} />
           </div>
           <div className="form-group">
             <label htmlFor="CardName">Vendor Name:</label>
@@ -186,7 +182,7 @@ const InvoiceForm = ({ invoiceData, scale }) => {
                 <th>Quantity</th>
                 <th>Unit Price</th>
                 <th>Tax</th>
-                <th>Select</th>
+                <th>Delete</th>
               </tr>
             </thead>
             <tbody>
@@ -196,7 +192,17 @@ const InvoiceForm = ({ invoiceData, scale }) => {
                   <td><input type="text" value={line.Quantity} onChange={(e) => handleInputChange(index, 'Quantity', e.target.value)} /></td>
                   <td><input type="text" value={line.UnitPrice} onChange={(e) => handleInputChange(index, 'UnitPrice', e.target.value)} /></td>
                   <td><input type="text" value={line.TaxCode} onChange={(e) => handleInputChange(index, 'TaxCode', e.target.value)} /></td>
-                  <td><input type="checkbox" checked={selectedRows.includes(index)} onChange={() => handleSelectRow(index)} /></td>
+                  <td>
+                    <span
+                      className="delete-icon"
+                      onMouseEnter={handleMouseEnter}
+                      onMouseLeave={handleMouseLeave}
+                      onClick={() => handleDeleteRow(index)}
+                      title="Delete Row"
+                    >
+                      <video src="/src/assets/delete-icon.mp4" loop muted></video>
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -204,7 +210,6 @@ const InvoiceForm = ({ invoiceData, scale }) => {
         </div>
         <div className="table-buttons">
           <button className="Addrow-btn" onClick={handleAddRow}>Add Row</button>
-          <button className="Delete-btn" onClick={handleDeleteRows} disabled={selectedRows.length === 0}>Delete Selected</button>
         </div>
       </main>
     </div>
