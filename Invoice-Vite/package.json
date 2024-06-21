@@ -23,6 +23,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
+    "gsap": "^3.12.5",
     "ldrs": "^1.0.2",
     "openai": "^4.0.0",
     "pdfjs-dist": "^3.11.174",
@@ -43,6 +44,7 @@
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "sass": "^1.77.6",
     "vite": "^5.2.0"
   }
 }

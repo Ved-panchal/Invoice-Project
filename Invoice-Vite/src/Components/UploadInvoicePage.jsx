@@ -1,10 +1,11 @@
 import axios from "axios";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
 import Loader from "./Loader";
 import "./CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
+import AnimatedButton from "./AnimatedButton";
 
 function UploadInvoicePage() {
   const [files, setFiles] = useState([]);
@@ -14,6 +15,7 @@ function UploadInvoicePage() {
   const navigate = useNavigate();
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const formRef = useRef(null);
 
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
@@ -38,40 +40,6 @@ function UploadInvoicePage() {
     } catch (error) {
       console.log('error uploading', error);
       throw error;
-    }
-  };
-
-  const setInitialFilesState = (files) => {
-    const newFiles = files.map((file) => ({
-      pdfId: "Loading...",
-      pdfName: file.name,
-      pdfStatus: "Pending",
-      createdAt: new Date(),
-    }));
-    setUploadedFiles((prevUploadedFiles) => [
-      ...newFiles,
-      ...prevUploadedFiles,
-    ]);
-    return [...newFiles, ...uploadedFiles];
-  };
-
-  const getApiResponse = async (file) => {
-    try {
-      const response = await uploadPdf(file);
-      const fileId = response.data;
-      return {
-        pdfStatus: "Completed",
-        pdfId: fileId,
-        pdfName: file.name,
-        createdAt: new Date(),
-      };
-    } catch (error) {
-      return {
-        pdfStatus: "Exception",
-        pdfId: "cannot be extracted",
-        pdfName: file.name,
-        createdAt: new Date(),
-      };
     }
   };
 
@@ -229,12 +197,17 @@ function UploadInvoicePage() {
     };
   }, []);
 
+  const childSubmit = (e) => {
+    e.preventDefault();
+    formRef.current.dispatchEvent(new Event("submit"))
+  }
+
   
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
       <div style={styles.container}>
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form ref={formRef} onSubmit={handleSubmit} style={styles.form}>
           <div {...getRootProps({ style: styles.dropzone })}>
             <input {...getInputProps()} />
             {isDragActive ? (
@@ -267,13 +240,14 @@ function UploadInvoicePage() {
             </div>
           )}
           {error && <p style={styles.error}>{error}</p>}
-          <button
+          {/* <button
             type="submit"
             disabled={files.length === 0 || loading}
             style={styles.button}
           >
             {loading ? "Uploading..." : "Upload"}
-          </button>
+          </button> */}
+          <AnimatedButton submit={childSubmit}/>
         </form>
         <div style={styles.tableContainer}>
           <table style={styles.table}>
@@ -327,7 +301,7 @@ function UploadInvoicePage() {
       </div>
     </div>
   );
-};
+}
 
 const styles = {
   page: {
