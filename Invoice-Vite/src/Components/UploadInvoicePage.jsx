@@ -1,9 +1,9 @@
 import axios from "axios";
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
 import Loader from "./Loader";
-import "./CSS/Temp.css";
+import "./CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
 
 function UploadInvoicePage() {
