@@ -240,14 +240,14 @@ function UploadInvoicePage() {
             </div>
           )}
           {error && <p style={styles.error}>{error}</p>}
-          {/* <button
+          <button
             type="submit"
             disabled={files.length === 0 || loading}
             style={styles.button}
           >
             {loading ? "Uploading..." : "Upload"}
-          </button> */}
-          <AnimatedButton submit={childSubmit}/>
+          </button>
+          {/* <AnimatedButton submit={childSubmit}/> */}
         </form>
         <div style={styles.tableContainer}>
           <table style={styles.table}>
