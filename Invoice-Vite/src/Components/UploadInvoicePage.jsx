@@ -1,9 +1,9 @@
 import axios from "axios";
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
 import Loader from "./Loader";
-import "./CSS/Temp.css";
+import "./CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
 
 function UploadInvoicePage() {
@@ -12,6 +12,8 @@ function UploadInvoicePage() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
@@ -73,6 +75,71 @@ function UploadInvoicePage() {
     }
   };
 
+  useEffect(() => {
+    const fetchUploadedFiles = async () => {
+      const userId = localStorage.getItem('userId');
+      try {
+        let response = await axios.post(`http://localhost:5500/get_pdfs/${userId}`, { page: currentPage, count: 5 });
+        let data = response.data;
+        setUploadedFiles(data);
+      } catch (error) {
+        console.error("Error fetching uploaded files:", error);
+        setError("Error fetching uploaded files. Please try again.");
+      }
+    };
+
+    fetchUploadedFiles();
+  }, [currentPage]);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+  
+  const renderPagination = () => {
+    const pages = [];
+    const maxPagesToShow = 7; // Adjust this to control the number of pages shown at once
+
+    const createPageButton = (pageNumber) => (
+      <button
+        key={pageNumber}
+        onClick={() => handlePageChange(pageNumber)}
+        style={currentPage === pageNumber ? styles.activePageButton : styles.pageButton}
+      >
+        {pageNumber}
+      </button>
+    );
+
+    const addEllipsis = (key) => (
+      <span key={key} style={styles.ellipsis}>...</span>
+    );
+
+    // Add first page and ellipsis if necessary
+    if (currentPage >= 4) {
+      pages.push(createPageButton(1));
+      if(currentPage != 4){
+        pages.push(addEllipsis("start-ellipsis"));
+      }
+    }
+
+    // Add pages around current page
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(createPageButton(i));
+    }
+
+    // Add last page and ellipsis if necessary
+    if (currentPage <= totalPages - 3) {
+      if (currentPage != totalPages - 3) {
+        pages.push(addEllipsis("end-ellipsis"));
+      }
+      pages.push(createPageButton(totalPages));
+    }
+
+    return pages;
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (files.length > 0) {
@@ -108,26 +175,28 @@ function UploadInvoicePage() {
     }
   };
 
-  useEffect(() => {
-    const fetchUploadedFiles = async () => {
-    localStorage.setItem('userId', '2');
-    const userId = localStorage.getItem('userId');
-    try {
-      let response = await axios.post(`http://localhost:5500/get_pdfs/${userId}`, {'page':1, 'count':5});
-      let data = response.data;
-      setUploadedFiles(data);
-    } catch (error) {
-      console.error("Error fetching uploaded files:", error);
-      setError("Error fetching uploaded files. Please try again.");
-    }};
-
-    fetchUploadedFiles();
-  }, []);
 
   const formatDate = (date) => {
     if (!date || !isValid(new Date(date))) return "Invalid date";
     return format(new Date(date), "MMM dd, yyyy, hh:mm a");
   };
+
+
+  const fetchTotalPages = async () => {
+    const userId = localStorage.getItem('userId');
+    try {
+      const response = await axios.get(`http://localhost:5500/get_total_pages/${userId}`);
+      const totalPdfCount = response.data;
+      setTotalPages(Math.ceil(totalPdfCount / 5)); // Assuming 5 PDFs per page
+    } catch (error) {
+      console.error("Error fetching total pages:", error);
+      setError("Error fetching total pages. Please try again.");
+    }
+  };
+  
+  useEffect(() => {
+    fetchTotalPages(); // Load the first page by default
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('user_id',"2")
@@ -251,6 +320,9 @@ function UploadInvoicePage() {
               ))}
             </tbody>
           </table>
+          <div style={styles.paginationContainer}>
+            {renderPagination()}
+          </div>
         </div>
       </div>
     </div>
@@ -423,6 +495,35 @@ const styles = {
     cursor: 'pointer',
     fontFamily: "'Poppins', sans-serif",
   },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '20px',
+  },
+  pageButton: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    cursor: 'pointer',
+    backgroundColor: '#34495e',
+    color: '#ecf0f1',
+    border: 'none',
+    borderRadius: '5px',
+  },
+  activePageButton: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    cursor: 'pointer',
+    backgroundColor: '#ecf0f1',
+    color: '#34495e',
+    border: 'none',
+    borderRadius: '5px',
+  },
+  ellipsis: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    color: '#ecf0f1',
+  },
+
 };
 
 export default UploadInvoicePage;
