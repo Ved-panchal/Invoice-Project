@@ -4,6 +4,13 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi_login import LoginManager
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi_login.exceptions import InvalidCredentialsException
+from starlette.responses import Response
+from models import User
+
 import os, ssl, cloudinary, cloudinary.uploader, json, asyncio
 from datetime import datetime
 from decouple import config
@@ -13,6 +20,9 @@ from bson import ObjectId
 from web_socket import socket_manager
 from database import mongo_conn
 from queue_service import queue_manager
+
+# Todo
+# create static folder with code
 
 # Disable SSL certificate verification
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -27,7 +37,10 @@ cloudinary.config(
 # Static folder
 STATIC_DIR = Path("static")
 
+SECRET = 'watashi-no-sacred-key'
+
 app = FastAPI()
+manager = LoginManager(SECRET, token_url='/auth/token', use_cookie=True)
 
 # Allow cross origin
 app.add_middleware(
@@ -42,7 +55,10 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/hello")
-def hello():
+def hello(user=Depends(manager)):
+    # print(f"username: {user.username}")
+    print(f"user: {user}")
+    print(f"username: {user['username']}")
     return "hello"
 
 @app.websocket("/ws/{user_id}")
@@ -54,10 +70,41 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
     except WebSocketDisconnect:
         socket_manager.disconnect(user_id)
 
+class InvalidCredentialsException(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=401, detail="Invalid username or password")
+
+@manager.user_loader()
+def load_user(username: str):  # could also be an asynchronous function
+    user = mongo_conn.get_users_collection().find_one({'username' : username})
+    return user
+
+@app.post('/auth/token')
+def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
+    username = data.username
+    password = data.password
+
+    user = load_user(username)
+    if not user:
+        raise InvalidCredentialsException()
+    elif password != user['password']:
+        raise InvalidCredentialsException()
+    
+    access_token = manager.create_access_token(
+        data=dict(sub=username)
+    )
+    manager.set_cookie(response, access_token)
+    response.status_code = 200
+    response.body = access_token.encode()  # Setting the body content of the response
+
+    return response
+
 @app.post("/uploadFiles/{user_id}")
-async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...)):
+async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user: User=Depends(manager)):
     response, filenames = [], []
     try:
+        user_id1 = user.username
+        print(user_id1)
         user_dir = STATIC_DIR / user_id
         if not user_dir.exists():
             os.makedirs(user_dir)
@@ -104,7 +151,7 @@ def upload_files_to_queue(filenames: list[str], user_id: str):
         return JSONResponse(content={"message": "File upload failed", "error": str(e)})
 
 @app.post('/delete_pdf')
-async def delete_file(payload: dict):
+async def delete_file(payload: dict, user: User=Depends(manager)):
     mapping_obj_id = payload['fileId']
     try:
         data = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": ObjectId(mapping_obj_id)})
@@ -124,18 +171,18 @@ async def delete_file(payload: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post('/delete_folder')
-async def delete_folder(folder_name: str):
-    if not folder_name:
-        raise HTTPException(status_code=400, detail='No folder name provided')
+# @app.post('/delete_folder')
+# async def delete_folder(folder_name: str):
+#     if not folder_name:
+#         raise HTTPException(status_code=400, detail='No folder name provided')
 
-    try:
-        cloudinary.api.delete_resources_by_prefix(f'output_images/{folder_name}')
-        cloudinary.api.delete_folder(f'output_images/{folder_name}')
+#     try:
+#         cloudinary.api.delete_resources_by_prefix(f'output_images/{folder_name}')
+#         cloudinary.api.delete_folder(f'output_images/{folder_name}')
 
-        return {'message': f'Folder {folder_name} and its contents have been deleted successfully.'}
-    except cloudinary.exceptions.Error as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#         return {'message': f'Folder {folder_name} and its contents have been deleted successfully.'}
+#     except cloudinary.exceptions.Error as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str):
@@ -171,16 +218,16 @@ def get_total_pages(user_id: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post('/insert_mapping_data')
-def insert_mapping_data(payload: dict):
-    try:
-        inserted_id = mongo_conn.get_user_pdf_mapping_collection().insert_one(payload)
-        if not inserted_id:
-            print('Mapping data insertion error')
-            raise HTTPException(status_code=400, detail="Mapping data insertion error")
-        return inserted_id
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# @app.post('/insert_mapping_data')
+# def insert_mapping_data(payload: dict):
+#     try:
+#         inserted_id = mongo_conn.get_user_pdf_mapping_collection().insert_one(payload)
+#         if not inserted_id:
+#             print('Mapping data insertion error')
+#             raise HTTPException(status_code=400, detail="Mapping data insertion error")
+#         return inserted_id
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 def convert_objectid(doc):
     try:

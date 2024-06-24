@@ -135,5 +135,5 @@ I have a sample of json and the explataion of each term
             Keep date format as in input text. NO COMMENTS."""
         f"{invoiceData}"
     )
-    
+     
     return prompt2
