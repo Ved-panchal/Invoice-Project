@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 start cmd /k "cd .. && cd Invoice-Vite && npm run dev"
 
 :: Navigate to backend folder and Start Fastapi
-start cmd /k "call ..\test\Scripts\activate && cd ..\backend && uvicorn api:app --port 5500"
+start cmd /k "call ..\test\Scripts\activate && cd ..\backend && uvicorn main:app --port 5500"
 
 set /p "num_workers=Enter the number of workers you want to start (Ensure that the API keys are available in .env for each worker): "
 for /l %%i in (1, 1, %num_workers%) do (
