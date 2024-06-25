@@ -129,12 +129,69 @@ I have a sample of json and the explataion of each term
             - CardName: Invoice or company name.
             - DiscountPrice: Discount on item or invoice total.
             - DocumentLines: List of items in the invoice.
-            - ItemCode: Unique numeric representation of a product/service.
-            - Quantity: Number of items bought.
-            - TaxCode: Defines tax rates and calculations.
-            - UnitPrice: Price per unit of an item.
-            Keep date format as in input text. NO COMMENTS."""
-        f"{invoiceData}"
+                - ItemCode: Unique numeric representation of a product/service.
+                - Quantity: Number of items bought.
+                - TaxCode: Defines tax rates and calculations.
+                - UnitPrice: Price per unit of an item.
+            Keep date format as in input text. NO COMMENTS.
+            Unit price and quantity should be in number only from the data and give me in string in json format.
+            STRICTLY WARNING :- DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.
+            DO NOT ADD ANY COMMENTS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT. PROVIDE VALUE IN JSON IN STRING FORMAT.
+        """
     )
-     
+
     return prompt2
+
+
+def generate_dynamic_prompt(text, fields_with_descriptions: dict):
+    # Construct the JSON template
+    json_template = "{\n"
+    for field, description in fields_with_descriptions.items():
+        if field == "DocumentLines":
+            json_template += f'    "{field}": [\n        {{"\n'
+            for subfield, subdescription in description.items():
+                json_template += f'            "{subfield}": "",\n'
+            json_template = json_template.rstrip(",\n") + "\n        }}\n    ],\n"
+        else:
+            json_template += f'    "{field}": "",\n'
+    json_template = json_template.rstrip(",\n") + "\n}"
+
+    # Construct the descriptions
+    descriptions = "Descriptions:\n"
+    for field, description in fields_with_descriptions.items():
+        if field == "DocumentLines":
+            descriptions += f"- {field}: List of items in the invoice.\n"
+            for subfield, subdescription in description.items():
+                descriptions += f"    - {subfield}: {subdescription}\n"
+        else:
+            descriptions += f"- {field}: {description}\n"
+
+    # Combine everything to form the final prompt
+    prompt = (
+        f"{text}\n"
+        f"Extract the details from this invoice in JSON format. If data is not available, provide an empty string.\n"
+        f"{json_template}\n"
+        f"{descriptions}"
+        f"Keep date format as in input text. NO COMMENTS.\n"
+        f"Unit price and quantity should be in number only from the data and give me in string in json format.\n"
+        f"STRICTLY WARNING :- DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.\n"
+        f"DO NOT ADD ANY COMMENTS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT. PROVIDE VALUE IN JSON IN STRING FORMAT."
+    )
+
+    return prompt
+
+# When we create register, we add default fields to the db along with it
+_default_fields = {
+    "CardCode": "Vendor ID, starts with 'V'.",
+    "TaxDate": "Date for VAT purposes.",
+    "DocDate": "Creation date of the document.",
+    "DocDueDate": "Payment due date.",
+    "CardName": "Invoice or company name.",
+    "DiscountPrice": "Discount on item or invoice total.",
+    "DocumentLines": {
+        "ItemCode": "Unique numeric representation of a product/service.",
+        "Quantity": "Number of items bought.",
+        "TaxCode": "Defines tax rates and calculations.",
+        "UnitPrice": "Price per unit of an item.",
+    }
+}

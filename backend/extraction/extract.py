@@ -1,14 +1,14 @@
 from together import Together
 from fastapi import HTTPException
-from models import DataType, TextData
+from models import TextData
 import json, os
 from bson import ObjectId
 
 from util import pdf_utils
-from .prompt import prepare_prompt
+from .prompt import generate_dynamic_prompt, _default_fields
 from database import mongo_conn
 
-def _get_data_from_gpt(data_type: DataType, client: Together, text):
+def _get_data_from_gpt(client: Together, text, user_id: str):
     """
     Extract invoice data using OpenAI API based on the data type.
 
@@ -20,31 +20,22 @@ def _get_data_from_gpt(data_type: DataType, client: Together, text):
     - str: The extracted invoice data in JSON format.
     """
     try:
-        if data_type == DataType.IMAGEURL:
-            prompt = prepare_prompt()
-            messages = [{"role": "user", "content": [prompt]}]
-            for url in text:
-                messages[0]["content"].append({"type": "image_url", "image_url": {"url": url}})
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                temperature=0
-            )
-        else:
-            prompt = prepare_prompt(text)
-            messages = [{"role": "user", "content": prompt}]
-            response = client.chat.completions.create(
-                # model="gpt-3.5-turbo",
-                model="Qwen/Qwen1.5-110B-Chat",
-                messages=messages,
-                temperature=0
-            )
+        # For dynamic prompt, frontend left
+        fields = mongo_conn.get_user_fields_collection().find_one({"userId": user_id}, {"fields": 1, "_id": 0}) or _default_fields
+        prompt = generate_dynamic_prompt(text, fields)
+        messages = [{"role": "user", "content": prompt}]
+        response = client.chat.completions.create(
+            # model="gpt-3.5-turbo",
+            model="Qwen/Qwen1.5-110B-Chat",
+            messages=messages,
+            temperature=0
+        )
         return response.choices[0].message.content
     
     except Exception as e:
         raise Exception(str(e))
 
-def _get_invoice_data_text(client, pdf_path: TextData) -> list:
+def _get_invoice_data_text(client, pdf_path: TextData, user_id: str) -> list:
     """
     API endpoint to extract invoice data from text extracted from a PDF.
 
@@ -65,7 +56,7 @@ def _get_invoice_data_text(client, pdf_path: TextData) -> list:
     try:
         pdf_data = pdf_utils.get_pdf_data_from_pdfplumber(pdf_path)
         # print(pdf_data)
-        result = _get_data_from_gpt(DataType.TEXT, client, pdf_data)
+        result = _get_data_from_gpt(client, pdf_data, user_id)
         if result:
             extracted_text = pdf_utils.remove_comments_from_json(result)
             # print("extracted_text: ", extracted_text)
@@ -84,7 +75,7 @@ def _process_file(client, filename: str, user_id: str) -> str:
     try:
         file_ext = filename.split('.')[-1].lower()
         if file_ext == 'pdf':
-            json_data =  _get_invoice_data_text(client, f"./static/{user_id}/{filename}")
+            json_data =  _get_invoice_data_text(client, f"./static/{user_id}/{filename}", user_id)
             data = {'data' : json_data}
             pdf_data_col = mongo_conn.get_pdf_data_collection()
             result = pdf_data_col.insert_one(data)
