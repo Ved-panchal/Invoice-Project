@@ -1,4 +1,4 @@
-def prepare_prompt(text=""):
+def prepare_prompt(text):
     """
     Prepare the prompt for the OpenAI API to extract invoice data.
 
@@ -8,6 +8,7 @@ def prepare_prompt(text=""):
     Returns:
     - str: The prepared prompt with the given text and instructions for data extraction.
     """
+
     invoiceData = {
         "CardCode": "",
         "TaxDate": "",
@@ -82,7 +83,7 @@ Item code > HSN/SAC > Item code in description
 Quantity :- the amount of items that are bought in the invoice each items can have different or same quantity.
 
 Tax code :- Tax codes are sequenced collections of one or more tax components that define the tax rates applied on line items and how to calculate the tax amount. Only one tax code can be applied on a line item.
-In tax code you should include Tax code with % value 
+In tax code you should include Tax code with % value
 like IGST, CGST, SGST and there %
 
 Tax codes are used in the enhanced tax engine configuration and also in third-party tax calculation systems. Tax codes in the basic tax configuration simply define the name, description, and the country/region.

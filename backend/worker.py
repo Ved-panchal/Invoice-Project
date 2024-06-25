@@ -1,9 +1,11 @@
 import pika, sys, json, time
 from pika.exceptions import AMQPConnectionError, ChannelWrongStateError
-from extraction import store_pdf_data
+
 from together import Together
 from decouple import config
 from pathlib import Path
+
+from extraction import store_pdf_data
 
 if len(sys.argv) != 2:
     print("Usage: python worker.py <API_KEY_NO>")

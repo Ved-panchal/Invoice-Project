@@ -1,16 +1,14 @@
-from prompt import prepare_prompt
-from openai import OpenAI
+from together import Together
 from fastapi import HTTPException
-from models import DataType, ImageUrls, TextData
-from pdf_utils import get_cords_of_word, get_pdf_data_from_pdfplumber,remove_comments_from_json
-from conversion import convert_doc
+from models import DataType, TextData
 import json, os
 from bson import ObjectId
+
+from util import pdf_utils
+from .prompt import prepare_prompt
 from database import mongo_conn
 
-# mongo_conn.get_pdf_data_collection() = mongo_conn.get_pdf_data_collection()
-
-def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
+def _get_data_from_gpt(data_type: DataType, client: Together, text):
     """
     Extract invoice data using OpenAI API based on the data type.
 
@@ -46,37 +44,12 @@ def get_data_from_gpt(data_type: DataType, client: OpenAI, text):
     except Exception as e:
         raise Exception(str(e))
 
-async def get_invoice_data(client: OpenAI, image_urls) -> dict:
-    """
-    API endpoint to extract invoice data from image URLs.
-
-    Args:
-    - image_urls (ImageUrls): A list of image URLs containing invoice images.
-
-    Returns:
-    - dict: The extracted invoice data in JSON format.
-
-    Raises:
-    - HTTPException: If no image URLs are provided or an error occurs during processing.
-    """
-    if not image_urls:
-        raise HTTPException(status_code=400, detail="No image URLs provided")
-
-    try:
-        result = get_data_from_gpt(DataType.IMAGEURL, client, image_urls)
-        start_index = result.find('{')
-        end_index = result.rfind('}')
-        extracted_text = result[start_index:end_index+1]
-        json_response = json.loads(extracted_text)
-        return json_response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-def get_invoice_data_text(client, pdf_path: TextData) -> list:
+def _get_invoice_data_text(client, pdf_path: TextData) -> list:
     """
     API endpoint to extract invoice data from text extracted from a PDF.
 
     Args:
+    - client : Object of Open AI or Qwen or other AI you are using.
     - pdf_path : The path to the PDF file.
 
     Returns:
@@ -90,15 +63,15 @@ def get_invoice_data_text(client, pdf_path: TextData) -> list:
         raise HTTPException(status_code=400, detail="No text provided")
 
     try:
-        pdf_data = get_pdf_data_from_pdfplumber(pdf_path)
+        pdf_data = pdf_utils.get_pdf_data_from_pdfplumber(pdf_path)
         # print(pdf_data)
-        result = get_data_from_gpt(DataType.TEXT, client, pdf_data)
+        result = _get_data_from_gpt(DataType.TEXT, client, pdf_data)
         if result:
-            extracted_text = remove_comments_from_json(result)
+            extracted_text = pdf_utils.remove_comments_from_json(result)
             # print("extracted_text: ", extracted_text)
             json_data = json.loads(extracted_text)
             # print("json_data: ", json_data)
-            res_list = get_cords_of_word(json_data, pdf_path)
+            res_list = pdf_utils.get_cords_of_word(json_data, pdf_path)
             res_list.insert(0, json_data)
             return res_list
         else:
@@ -107,11 +80,11 @@ def get_invoice_data_text(client, pdf_path: TextData) -> list:
         print("Error requesting api from extraction/get_invoice_data_text.\n",e)
         raise HTTPException(status_code=500, detail=str(e))
     
-def process_file(client, filename: str, user_id: str) -> str:
+def _process_file(client, filename: str, user_id: str) -> str:
     try:
         file_ext = filename.split('.')[-1].lower()
         if file_ext == 'pdf':
-            json_data =  get_invoice_data_text(client, f"./static/{user_id}/{filename}")
+            json_data =  _get_invoice_data_text(client, f"./static/{user_id}/{filename}")
             data = {'data' : json_data}
             pdf_data_col = mongo_conn.get_pdf_data_collection()
             result = pdf_data_col.insert_one(data)
@@ -120,35 +93,21 @@ def process_file(client, filename: str, user_id: str) -> str:
             else:
                 raise HTTPException(status_code=400, detail="Database insertion error")
             return result
-
-        # elif file_ext == "jpeg":
-        #     if filename:
-        #         (uploaded_image_urls, _) = await process_image(filename)
-        #         json_data = await get_invoice_data(client, uploaded_image_urls)
-        #         data = {'data' : [json_data]}
-        #         result = pdf_data_collection.insert_one(data)
-        #         if result:
-        #             result = str(result.inserted_id) + "1"
-        #         else:
-        #             raise HTTPException(status_code=400, detail="Database insertion error")
-        #         return result
-        #     else:
-        #         raise HTTPException(status_code=400, detail="Can not convert image to JPEG")
         else:
             raise HTTPException(status_code=400, detail='Unsupported file format')
     except Exception as e:
         raise Exception(str(e))
     
-def store_pdf_data(client, user_id, filename, STATIC_DIR):
+def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
     try:
         file_ext = filename.split('.')[-1].lower()
         if file_ext in ['doc', 'docx']:
-            filename = convert_doc(filename)
+            filename = pdf_utils.convert_doc(filename)
 
                 # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
                 #     filename = await convert_image(filename)
 
-        new_file_id = process_file(client, filename, user_id)
+        new_file_id = _process_file(client, filename, user_id)
         file_ext = filename.split('.')[-1]
         file_id = filename.split('.')[0]
         file_location = STATIC_DIR / user_id / filename
