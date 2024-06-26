@@ -8,7 +8,7 @@ from util import pdf_utils
 from .prompt import generate_dynamic_prompt, _default_fields
 from database import mongo_conn
 
-def _get_data_from_gpt(client: Together, text, user_id: str):
+def _get_data_from_gpt(client: Together, text, user_id: str) -> str:
     """
     Extract invoice data using OpenAI API based on the data type.
 
@@ -30,7 +30,7 @@ def _get_data_from_gpt(client: Together, text, user_id: str):
             messages=messages,
             temperature=0
         )
-        return response.choices[0].message.content
+        return str(response.choices[0].message.content)
     
     except Exception as e:
         raise Exception(str(e))
@@ -55,13 +55,13 @@ def _get_invoice_data_text(client, pdf_path: TextData, user_id: str) -> list:
 
     try:
         pdf_data = pdf_utils.get_pdf_data_from_pdfplumber(pdf_path)
-        # print(pdf_data)
+        print(pdf_data)
         result = _get_data_from_gpt(client, pdf_data, user_id)
         if result:
             extracted_text = pdf_utils.remove_comments_from_json(result)
-            # print("extracted_text: ", extracted_text)
+            print("extracted_text: ", extracted_text)
             json_data = json.loads(extracted_text)
-            # print("json_data: ", json_data)
+            print("json_data: ", json_data)
             res_list = pdf_utils.get_cords_of_word(json_data, pdf_path)
             res_list.insert(0, json_data)
             return res_list
