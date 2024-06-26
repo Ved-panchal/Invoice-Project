@@ -212,7 +212,6 @@ function UploadInvoicePage() {
       setError("Error fetching total pages. Please try again.");
     }
   };
-
   
   return (
     <div style={styles.page}>
