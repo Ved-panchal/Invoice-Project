@@ -21,8 +21,14 @@ def _get_data_from_gpt(client: Together, text, user_id: str) -> str:
     """
     try:
         # For dynamic prompt, frontend left
-        fields = mongo_conn.get_user_fields_collection().find_one({"userId": user_id}, {"fields": 1, "_id": 0}) or _default_fields
+        fields = mongo_conn.get_user_fields_collection().find_one({"userId": user_id}, {"fields": 1, "_id": 0})
+        if fields is not None:
+            fields = fields["fields"]
+        else :
+            fields = _default_fields
+        print("fields", fields)
         prompt = generate_dynamic_prompt(text, fields)
+        print("prompt", prompt)
         messages = [{"role": "user", "content": prompt}]
         response = client.chat.completions.create(
             # model="gpt-3.5-turbo",
@@ -55,13 +61,13 @@ def _get_invoice_data_text(client, pdf_path: TextData, user_id: str) -> list:
 
     try:
         pdf_data = pdf_utils.get_pdf_data_from_pdfplumber(pdf_path)
-        print(pdf_data)
+        # print(pdf_data)
         result = _get_data_from_gpt(client, pdf_data, user_id)
         if result:
             extracted_text = pdf_utils.remove_comments_from_json(result)
-            print("extracted_text: ", extracted_text)
+            # print("extracted_text: ", extracted_text)
             json_data = json.loads(extracted_text)
-            print("json_data: ", json_data)
+            # print("json_data: ", json_data)
             res_list = pdf_utils.get_cords_of_word(json_data, pdf_path)
             res_list.insert(0, json_data)
             return res_list
