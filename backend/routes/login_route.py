@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from starlette.responses import Response
 from decouple import config
+from datetime import timedelta
 
 from routes import login_manager
 from database import mongo_conn
@@ -31,9 +32,11 @@ def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
     elif password != user['password']:
         raise InvalidCredentialsException()
     
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = login_manager.create_access_token(
         data=dict(sub=username),
-        expires=ACCESS_TOKEN_EXPIRE_MINUTES
+        expires=access_token_expires
     )
     login_manager.set_cookie(response, access_token)
     response.status_code = 200
