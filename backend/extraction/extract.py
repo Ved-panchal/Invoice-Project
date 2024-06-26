@@ -26,9 +26,9 @@ def _get_data_from_gpt(client: Together, text, user_id: str) -> str:
             fields = fields["fields"]
         else :
             fields = _default_fields
-        print("fields", fields)
+        # print("fields", fields)
         prompt = generate_dynamic_prompt(text, fields)
-        print("prompt", prompt)
+        # print("prompt", prompt)
         messages = [{"role": "user", "content": prompt}]
         response = client.chat.completions.create(
             # model="gpt-3.5-turbo",

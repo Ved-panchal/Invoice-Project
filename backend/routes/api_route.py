@@ -1,4 +1,3 @@
-
 from fastapi import File, HTTPException, UploadFile, BackgroundTasks, APIRouter, Depends
 
 import os
@@ -10,9 +9,6 @@ from util import utils
 from database import mongo_conn
 from queue_service import queue_manager
 from routes import login_manager, STATIC_DIR
-
-# Todo
-# create static folder with code
 
 api_router = APIRouter()
 
