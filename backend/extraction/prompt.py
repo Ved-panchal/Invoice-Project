@@ -176,22 +176,23 @@ def generate_dynamic_prompt(text, fields_with_descriptions: dict):
         f"Unit price and quantity should be in number only from the data and give me in string in json format.\n"
         f"STRICTLY WARNING : DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.\n"
         f"STRICTLY WARNING: DO NOT ADD ANY COMMENTS AND EXTRA FEILDS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT PROVIDED ABOVE. PROVIDE VALUE IN JSON IN STRING FORMAT."
+        f"This are the fields that you need to extract from this invoice text, please provide all the data exactly given in invoice and yes you can calculate some terms but don't cut any data from invoice and reply me with every data."
     )
 
     return prompt
 
 # When we create register, we add default fields to the db along with it
 _default_fields = {
-    "CardCode": "Vendor ID, starts with 'V'.",
-    "TaxDate": "Date for VAT purposes.",
+    "CardCode": "CardCode is vendor id most of time it will not available in invoice and if present then it will written like this V0001 or like this if you found vendor id like this then only give me that otherwise give me blank STRICTLY follow this.",
+    "TaxDate": "Tax date on an invoice refers to the date on which a delivery is recorded for VAT purposes1. If an invoice is issued within 14 days of the supply date, the invoice date is used as the tax point for VAT purposes.Format For TaxDate should be same that was written in the input.",
     "DocDate": "Creation date of the document.",
     "DocDueDate": "Payment due date.",
     "CardName": "Invoice or company name.",
-    "DiscountPrice": "Discount on item or invoice total.",
+    "DiscountPercentage": "Discount on item or invoice total.",
     "DocumentLines": {
-        "ItemCode": "Unique numeric representation of a product/service.",
-        "Quantity": "Number of items bought.",
-        "TaxCode": "Defines tax rates and calculations.",
-        "UnitPrice": "Price per unit of an item.",
+        "ItemCode": "HSN or SAC can also be called as item code. An item code is a numeric representation of a product or service provided by a department to a customer. Each product needs to have a unique item code to ensure appropriate classification, and item codes are essential for proper invoicing. you give item code among these two don't give me both just one HSA and SAC or among the description that written.For item code priority should be like this, Item code > HSN/SAC > Item code in description",
+        "Quantity": "the amount of items that are bought in the invoice each items can have different or same quantity.",
+        "TaxCode": "Tax codes are sequenced collections of one or more tax components that define the tax rates applied on line items and how to calculate the tax amount. Only one tax code can be applied on a line item. In tax code you should include Tax code with % value like IGST, CGST, SGST and there % Tax codes are used in the enhanced tax engine configuration and also in third-party tax calculation systems. Tax codes in the basic tax configuration simply define the name, description, and the country/region. For line items that are exempted from tax, instead of not applying a tax code, apply a tax code that has a tax component with zero tax rate. The description of this tax code should clearly indicate that the item is exempted from tax. In India Tax code can include IGST,SGST,CGST with the percentage value..",
+        "UnitPrice": "It is the price of the single unit of an item. it is not total amount, In this above output Amount is the unit price not the annual charges this are the fields that you need to extract from this invoice text, please provide all the data exactly given in invoice and yes you can calculate some terms but don't cut any data from invoice and reply me with every data. I have a sample of json and the explataion of each term.",
     }
 }

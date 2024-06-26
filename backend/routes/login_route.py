@@ -31,9 +31,9 @@ def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
         raise InvalidCredentialsException()
     elif password != user['password']:
         raise InvalidCredentialsException()
-    
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
     access_token = login_manager.create_access_token(
         data=dict(sub=username),
         expires=access_token_expires
