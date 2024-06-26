@@ -1,8 +1,10 @@
 from fastapi_login import LoginManager
 from pathlib import Path
+from decouple import config
 import os
 
-SECRET = 'watashi-no-sacred-key'
+SECRET = config('LOGIN_SECRET')
+
 login_manager = LoginManager(SECRET, token_url='/auth/token', use_cookie=True)
 
 # Creae static folder if does not exist
