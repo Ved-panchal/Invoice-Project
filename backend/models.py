@@ -12,3 +12,7 @@ class ImageUrls(BaseModel):
 
 class TextData(BaseModel):
     pdf_path: str
+
+class User(BaseModel):
+    username: str
+    password: str

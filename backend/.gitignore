@@ -1,4 +1,5 @@
-.env
-static
 __pycache__
-*test*
+static
+.env
+zz*
+test
