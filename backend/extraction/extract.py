@@ -91,6 +91,9 @@ def _process_file(client, filename: str, user_id: str) -> str:
     
 def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
     try:
+        file_id = filename.split('.')[0]
+        obj_id = ObjectId(file_id)
+
         file_ext = filename.split('.')[-1].lower()
         if file_ext in ['doc', 'docx']:
             filename = pdf_utils.convert_doc(filename)
@@ -98,10 +101,10 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
                 # elif file_ext in ['jpg', 'jpeg', 'png', 'tiff']:
                 #     filename = await convert_image(filename)
 
-        new_file_id = _process_file(client, filename, user_id)
         file_ext = filename.split('.')[-1]
-        file_id = filename.split('.')[0]
         file_location = STATIC_DIR / user_id / filename
+
+        new_file_id = _process_file(client, filename, user_id)
 
         # Construct new filename using file_id and the original extension
         new_filename = f"{new_file_id}.{file_ext}"
@@ -109,17 +112,25 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
 
         # Rename the file
         os.rename(file_location, new_file_location)
-        
+
         update_operation = {
             '$set': {
                 'pdfData.pdfId': new_file_id,
                 'pdfData.pdfStatus': 'Completed'
             }
         }
-        obj_id = ObjectId(file_id)
         pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
         pdf_mapping.update_one({'_id':obj_id}, update_operation)
-        
+
         return new_file_id
+
     except Exception as e:
-        raise Exception(str(e))
+        update_operation = {
+            '$set': {
+                'pdfData.pdfId': '',
+                'pdfData.pdfStatus': 'Exception'
+            }
+        }
+        pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
+        pdf_mapping.update_one({'_id':obj_id}, update_operation)
+        raise Exception("Exception from store_pdf_data: ", str(e))

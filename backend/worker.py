@@ -45,7 +45,7 @@ class PikaWorker:
             response_json = json.dumps({'pdfStatus':'Completed', 'pdfId': response, 'id': body.decode().split('.')[0]})
         except Exception as e:
             print(f'Error processing task.\nDetails: {e}')
-            response_json = json.dumps({'error': str(e),'pdfStatus':'Exception'})
+            response_json = json.dumps({'error': "Exception from worker...", 'pdfStatus':'Exception', 'id': body.decode().split('.')[0]})
 
         try:
             print(f'task completed')
