@@ -401,10 +401,10 @@ const InvoiceForm = ({ invoiceData, scale }) => {
           <table className="invoice-table">
             <thead>
               <tr>
-                <th>Item Code</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Tax</th>
+                {console.log("key", Object.keys(invoice.DocumentLines[0]))}
+                {Object.keys(invoice.DocumentLines[0]).map((item) => {
+                  return (<th>{item}</th>)
+                })}
                 <th>Delete</th>
               </tr>
             </thead>

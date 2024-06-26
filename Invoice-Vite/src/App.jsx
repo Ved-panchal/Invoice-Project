@@ -3,11 +3,13 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import UploadInvoicePage from "./pages/UploadInvoicePage";
 import MyDocument from './pages/MyDocument';
 import Loader from './Components/Loader/Loader';
+import Signin from './pages/Signin';
 
 function App() {
   return (
     <Router>
     <Routes>
+        <Route path="/signin"  element={<Signin />} />
         <Route path="/"  element={<UploadInvoicePage />} />
         <Route path="/my-documents/:fileCode" element={<MyDocument />} />
         <Route path="/loader" element={<div style={{
