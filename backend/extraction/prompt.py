@@ -135,8 +135,8 @@ I have a sample of json and the explataion of each term
                 - UnitPrice: Price per unit of an item.
             Keep date format as in input text. NO COMMENTS.
             Unit price and quantity should be in number only from the data and give me in string in json format.
-            STRICTLY WARNING :- DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.
-            DO NOT ADD ANY COMMENTS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT. PROVIDE VALUE IN JSON IN STRING FORMAT.
+            STRICTLY WARNING :- DO NOT CALCULATE ANYTHING BY YOURSELF.
+            DO NOT ADD ANY COMMENTS AND EXTRA FEILDS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT PROVIDED ABOVE. PROVIDE VALUE IN JSON IN STRING FORMAT.
         """
     )
 
@@ -174,8 +174,8 @@ def generate_dynamic_prompt(text, fields_with_descriptions: dict):
         f"{descriptions}"
         f"Keep date format as in input text. NO COMMENTS.\n"
         f"Unit price and quantity should be in number only from the data and give me in string in json format.\n"
-        f"STRICTLY WARNING :- DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.\n"
-        f"DO NOT ADD ANY COMMENTS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT. PROVIDE VALUE IN JSON IN STRING FORMAT."
+        f"STRICTLY WARNING : DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.\n"
+        f"STRICTLY WARNING: DO NOT ADD ANY COMMENTS AND EXTRA FEILDS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT PROVIDED ABOVE. PROVIDE VALUE IN JSON IN STRING FORMAT."
     )
 
     return prompt
