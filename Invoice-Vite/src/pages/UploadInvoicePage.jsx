@@ -5,7 +5,7 @@ import Loader from "../Components/Loader/Loader";
 import "../CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
 import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
-import api from "../../utils/apiUtils";
+import api from "../utils/apiUtils";
 
 const allowedFileTypes = ["application/pdf", "image/jpeg", "image/png"];
 

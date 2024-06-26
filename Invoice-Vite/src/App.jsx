@@ -8,7 +8,6 @@ function App() {
   return (
     <Router>
     <Routes>
-      <Route path='/' ele
         <Route path="/"  element={<UploadInvoicePage />} />
         <Route path="/my-documents/:fileCode" element={<MyDocument />} />
         <Route path="/loader" element={<div style={{
