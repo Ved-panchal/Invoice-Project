@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import axios from 'axios';
-import InvoiceForm from './InvoiceForm';
-import './CSS/PdfViewer.css';
+import InvoiceForm from '../Components/InvoiceForm/InvoiceForm';
+import '../CSS/PdfViewer.css';
 import { useNavigate } from 'react-router-dom';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;

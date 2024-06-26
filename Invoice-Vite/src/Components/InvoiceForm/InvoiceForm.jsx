@@ -220,7 +220,7 @@
 
 
 import React, { useEffect, useState } from 'react';
-import './CSS/InvoiceForm.css';
+import '../../CSS/InvoiceForm.css';
 
 const InvoiceForm = ({ invoiceData, scale }) => {
   const [invoice, setInvoice] = useState(invoiceData[0]);

@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
-import Loader from "./Loader";
-import "./CSS/UploadInvocie.css";
+import Loader from "../Components/Loader/Loader";
+import "../CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
-import AnimatedButton from "./AnimatedButton";
+import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
 import api from "../../utils/apiUtils";
 
 const allowedFileTypes = ["application/pdf", "image/jpeg", "image/png"];
@@ -87,7 +87,6 @@ function UploadInvoicePage() {
       });
     };
 
-    // Cleanup function to close WebSocket connection when component unmounts
     return () => {
       socket.close();
     };
@@ -119,7 +118,6 @@ function UploadInvoicePage() {
       <span key={key} style={styles.ellipsis}>...</span>
     );
 
-    // Add first page and ellipsis if necessary
     if (currentPage >= 4) {
       pages.push(createPageButton(1));
       if(currentPage != 4){
@@ -127,7 +125,6 @@ function UploadInvoicePage() {
       }
     }
 
-    // Add pages around current page
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
 

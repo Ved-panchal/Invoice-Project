@@ -1,13 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import UploadInvoicePage from "./Components/UploadInvoicePage";
-import MyDocument from './Components/MyDocument';
-import Loader from './Components/Loader';
+import UploadInvoicePage from "./pages/UploadInvoicePage";
+import MyDocument from './pages/MyDocument';
+import Loader from './Components/Loader/Loader';
 
 function App() {
   return (
     <Router>
     <Routes>
+      <Route path='/' ele
         <Route path="/"  element={<UploadInvoicePage />} />
         <Route path="/my-documents/:fileCode" element={<MyDocument />} />
         <Route path="/loader" element={<div style={{
