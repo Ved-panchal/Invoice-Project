@@ -1,4 +1,3 @@
-import axios from "axios";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
@@ -6,6 +5,9 @@ import Loader from "./Loader";
 import "./CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
 import AnimatedButton from "./AnimatedButton";
+import api from "../../utils/apiUtils";
+
+const allowedFileTypes = ["application/pdf", "image/jpeg", "image/png"];
 
 function UploadInvoicePage() {
   const [files, setFiles] = useState([]);
@@ -15,15 +17,19 @@ function UploadInvoicePage() {
   const navigate = useNavigate();
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const formRef = useRef(null);
 
   const onDrop = useCallback((acceptedFiles) => {
-    setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
+    const validFiles = acceptedFiles.filter(file => allowedFileTypes.includes(file.type));
+    if (validFiles.length !== acceptedFiles.length) {
+      setError("Please upload only PDF, JPEG, or PNG files.");
+      return;
+    }
+    setFiles((prevFiles) => [...prevFiles, ...validFiles]);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: "application/pdf, image/jpeg, image/png",
+    accept: allowedFileTypes.join(","),
   });
 
   const uploadPdf = async () => {
@@ -31,7 +37,7 @@ function UploadInvoicePage() {
       const formData = new FormData();
       files.forEach((file) => formData.append('documents', file));
       const userId = localStorage.getItem('userId');
-      const response = await axios.post(`http://localhost:5500/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
+      const response = await api.post(`/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -43,19 +49,52 @@ function UploadInvoicePage() {
     }
   };
 
+
+  const fetchUploadedFiles = async () => {
+    const userId = localStorage.getItem('userId');
+    try {
+      let response = await api.post(`/get_pdfs/${userId}`, { page: currentPage, count: 5 });
+      let data = response.data;
+      setUploadedFiles(data)
+    } catch (error) {
+      console.error("Error fetching uploaded files:", error);
+      setError("Error fetching uploaded files. Please try again.");
+    }
+  };
+
   useEffect(() => {
-    const fetchUploadedFiles = async () => {
-      const userId = localStorage.getItem('userId');
-      try {
-        let response = await axios.post(`http://localhost:5500/get_pdfs/${userId}`, { page: currentPage, count: 5 });
-        let data = response.data;
-        setUploadedFiles(data);
-      } catch (error) {
-        console.error("Error fetching uploaded files:", error);
-        setError("Error fetching uploaded files. Please try again.");
-      }
+    localStorage.setItem('userId',"2")
+    const userId = localStorage.getItem('userId');
+
+    const socket = new WebSocket(`ws://localhost:5500/ws/${userId}`);
+
+    // Listen for messages from the WebSocket server
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log("ws message",message)
+      // Update the uploadedFiles state based on the received message
+      setUploadedFiles((prevFiles) => {
+        const index = prevFiles.findIndex((file) => file.id === message.id);
+        if (index !== -1) {
+          return [
+            ...prevFiles.slice(0, index),
+            { ...prevFiles[index], ...message },
+            ...prevFiles.slice(index + 1),
+          ];
+        } else {
+          return prevFiles;
+        }
+      });
     };
 
+    // Cleanup function to close WebSocket connection when component unmounts
+    return () => {
+      socket.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchTotalPages(); 
     fetchUploadedFiles();
   }, [currentPage]);
 
@@ -65,7 +104,6 @@ function UploadInvoicePage() {
   
   const renderPagination = () => {
     const pages = [];
-    const maxPagesToShow = 7; // Adjust this to control the number of pages shown at once
 
     const createPageButton = (pageNumber) => (
       <button
@@ -105,18 +143,25 @@ function UploadInvoicePage() {
       pages.push(createPageButton(totalPages));
     }
 
+    if(pages.length === 0){
+      return <h1 style={{color:"white"}}>Please Upload Pdfs!!</h1>
+    }
+
     return pages;
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
+    // event.preventDefault();
     if (files.length > 0) {
       setError(null);
       try {
         setLoading(true);
         let newFiles =  await uploadPdf();
         setLoading(false);
-        setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+        // setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+        fetchTotalPages();
+        setCurrentPage(1);
+        fetchUploadedFiles();
       } catch (error) {
         console.error("Error uploading document:", error);
         setError("Error uploading document. Please reload and try again.");
@@ -132,11 +177,17 @@ function UploadInvoicePage() {
     try {
       // Only attempt to delete from the server if the file has been successfully uploaded
       if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
-        await axios.post("http://localhost:5500/delete_pdf", { fileId: fileToDelete.id });
+        await api.post("/delete_pdf", { fileId: fileToDelete.id });
       }
       setUploadedFiles((prevUploadedFiles) =>
         prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
       );
+      if(uploadedFiles.length === 1){
+        setCurrentPage(currentPage - 1);
+        return;
+      }
+      fetchTotalPages();
+      fetchUploadedFiles();
     } catch (error) {
       console.error("Error deleting document:", error);
       setError("Error deleting document. Please try again.");
@@ -153,7 +204,7 @@ function UploadInvoicePage() {
   const fetchTotalPages = async () => {
     const userId = localStorage.getItem('userId');
     try {
-      const response = await axios.get(`http://localhost:5500/get_total_pages/${userId}`);
+      const response = await api.get(`/get_total_pages/${userId}`);
       const totalPdfCount = response.data;
       setTotalPages(Math.ceil(totalPdfCount / 5)); // Assuming 5 PDFs per page
     } catch (error) {
@@ -161,53 +212,13 @@ function UploadInvoicePage() {
       setError("Error fetching total pages. Please try again.");
     }
   };
-  
-  useEffect(() => {
-    fetchTotalPages(); // Load the first page by default
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('user_id',"2")
-    const user_id = localStorage.getItem('user_id');
-
-    const socket = new WebSocket(`ws://localhost:5500/ws/${user_id}`);
-
-    // Listen for messages from the WebSocket server
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log("ws message",message)
-      // Update the uploadedFiles state based on the received message
-      setUploadedFiles((prevFiles) => {
-        const index = prevFiles.findIndex((file) => file.id === message.id);
-        if (index !== -1) {
-          return [
-            ...prevFiles.slice(0, index),
-            { ...prevFiles[index], ...message },
-            ...prevFiles.slice(index + 1),
-          ];
-        } else {
-          return prevFiles;
-        }
-      });
-    };
-
-    // Cleanup function to close WebSocket connection when component unmounts
-    return () => {
-      socket.close();
-    };
-  }, []);
-
-  const childSubmit = (e) => {
-    e.preventDefault();
-    formRef.current.dispatchEvent(new Event("submit"))
-  }
 
   
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
       <div style={styles.container}>
-        <form ref={formRef} onSubmit={handleSubmit} style={styles.form}>
+        <form style={styles.form}>
           <div {...getRootProps({ style: styles.dropzone })}>
             <input {...getInputProps()} />
             {isDragActive ? (
@@ -240,14 +251,7 @@ function UploadInvoicePage() {
             </div>
           )}
           {error && <p style={styles.error}>{error}</p>}
-          {/* <button
-            type="submit"
-            disabled={files.length === 0 || loading}
-            style={styles.button}
-          >
-            {loading ? "Uploading..." : "Upload"}
-          </button> */}
-          <AnimatedButton submit={childSubmit}/>
+            <AnimatedButton submit={handleSubmit} isDisabled={(files.length === 0 || loading) ? true : false}/>
         </form>
         <div style={styles.tableContainer}>
           <table style={styles.table}>
@@ -266,18 +270,21 @@ function UploadInvoicePage() {
                   <td style={styles.tableCell}>
                     {file.pdfStatus === 'Pending' && <div style={styles.pendingStatus}><span>{file.pdfStatus}  </span><Loader /></div>}
                     {file.pdfStatus === 'Completed' && <div style={styles.completeStatus}>{file.pdfStatus}</div>}
+                    {file.pdfStatus === 'Exception' && <div style={styles.exceptionStatus}>{file.pdfStatus}</div>}
                   </td>
                   <td style={styles.tableCell}>{file.pdfName}</td>
                   <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
                   <td style={styles.tableCell}>PENDING</td>
                   <td style={styles.tableCell}>
                     <div style={styles.actions}>
+                    {/* {file.pdfStatus !== 'Pending' && ( */}
                       <button
                         style={styles.deleteButton}
                         onClick={() => handleDelete(file)}
                       >
                         Delete
                       </button>
+                      {/* )} */}
                       {file.pdfStatus === 'Completed' && (
                         <button
                           style={styles.viewButton}
@@ -308,7 +315,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: '100vh',
+    minHeight: '100vh',
     backgroundColor: '#2c3e50',
     padding: '20px',
     textAlign: 'center',
@@ -453,6 +460,15 @@ const styles = {
     fontFamily: "'Poppins', sans-serif",
     backgroundColor: '#FFC700'
   },
+  exceptionStatus: {
+    width:'100%',
+    padding: '5px 10px',
+    color: '#4E150C',
+    borderRadius: '5px',
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
+    backgroundColor: '#F05941'
+  },
   actions: {
     display: 'flex',
     justifyContent: 'center',
@@ -472,7 +488,7 @@ const styles = {
   paginationContainer: {
     display: 'flex',
     justifyContent: 'center',
-    marginTop: '20px',
+    margin: '20px 0 15px 0',
   },
   pageButton: {
     padding: '5px 10px',
