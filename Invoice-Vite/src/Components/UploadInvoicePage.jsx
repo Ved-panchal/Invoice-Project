@@ -94,7 +94,7 @@ function UploadInvoicePage() {
   }, []);
 
   useEffect(() => {
-    fetchTotalPages(); 
+    fetchTotalPages();
     fetchUploadedFiles();
   }, [currentPage]);
 
