@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './CSS/InvoiceForm.css';
+import '../../CSS/InvoiceForm.css';
 
 const InvoiceForm = ({ invoiceData, scale }) => {
   var { CardCode, TaxDate, DocDate, DocDueDate, CardName, DiscountPercent, DocumentLines } = invoiceData[0];

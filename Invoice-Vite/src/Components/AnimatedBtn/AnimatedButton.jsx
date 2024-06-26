@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useRef,useCallback } from "react";
 import { gsap, Elastic } from "gsap";
-import "./CSS/AnimatedButton.scss";
+import "../../CSS/AnimatedButton.scss";
 
 const AnimatedButton = ({ submit, isDisabled }) => {
   const svgref = useRef(null);

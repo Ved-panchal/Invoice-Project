@@ -1,23 +1,35 @@
-import axios from "axios";
-import React, { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
-import Loader from "./Loader";
-import "./CSS/Temp.css";
+import Loader from "../Components/Loader/Loader";
+import "../CSS/UploadInvocie.css";
+import { useNavigate } from "react-router-dom";
+import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
+import api from "../../utils/apiUtils";
 
-function Temp() {
+const allowedFileTypes = ["application/pdf", "image/jpeg", "image/png"];
+
+function UploadInvoicePage() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const onDrop = useCallback((acceptedFiles) => {
-    setFiles((prevFiles) => [...prevFiles, ...acceptedFiles]);
+    const validFiles = acceptedFiles.filter(file => allowedFileTypes.includes(file.type));
+    if (validFiles.length !== acceptedFiles.length) {
+      setError("Please upload only PDF, JPEG, or PNG files.");
+      return;
+    }
+    setFiles((prevFiles) => [...prevFiles, ...validFiles]);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: "application/pdf, image/jpeg, image/png",
+    accept: allowedFileTypes.join(","),
   });
 
   const uploadPdf = async () => {
@@ -25,7 +37,7 @@ function Temp() {
       const formData = new FormData();
       files.forEach((file) => formData.append('documents', file));
       const userId = localStorage.getItem('userId');
-      const response = await axios.post(`http://localhost:5500/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
+      const response = await api.post(`/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -37,101 +49,24 @@ function Temp() {
     }
   };
 
-  const setInitialFilesState = (files) => {
-    const newFiles = files.map((file) => ({
-      pdfId: "Loading...",
-      pdfName: file.name,
-      pdfStatus: "Pending",
-      createdAt: new Date(),
-    }));
-    setUploadedFiles((prevUploadedFiles) => [
-      ...newFiles,
-      ...prevUploadedFiles,
-    ]);
-    return [...newFiles, ...uploadedFiles];
-  };
 
-  const getApiResponse = async (file) => {
-    try {
-      const response = await uploadPdf(file);
-      const fileId = response.data;
-      return {
-        pdfStatus: "Completed",
-        pdfId: fileId,
-        pdfName: file.name,
-        createdAt: new Date(),
-      };
-    } catch (error) {
-      return {
-        pdfStatus: "Exception",
-        pdfId: "cannot be extracted",
-        pdfName: file.name,
-        createdAt: new Date(),
-      };
-    }
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (files.length > 0) {
-      setError(null);
-      try {
-        setLoading(true);
-        let newFiles =  await uploadPdf();
-        setLoading(false);
-        setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
-      } catch (error) {
-        console.error("Error uploading document:", error);
-        setError("Error uploading document. Please reload and try again.");
-      }
-      setFiles([]);
-    } else {
-      console.error("No files selected.");
-      setError("No files selected. Please select files to upload.");
-    }
-  };
-
-  const handleDelete = async (fileToDelete) => {
-    try {
-      // Only attempt to delete from the server if the file has been successfully uploaded
-      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
-        await axios.post("http://localhost:5500/delete", { fileId: fileToDelete.id });
-      }
-      setUploadedFiles((prevUploadedFiles) =>
-        prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
-      );
-    } catch (error) {
-      console.error("Error deleting document:", error);
-      setError("Error deleting document. Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    const fetchUploadedFiles = async () => {
-    localStorage.setItem('userId', '2');
+  const fetchUploadedFiles = async () => {
     const userId = localStorage.getItem('userId');
     try {
-      let response = await axios.get(`http://localhost:5500/get_pdfs/${userId}`);
+      let response = await api.post(`/get_pdfs/${userId}`, { page: currentPage, count: 5 });
       let data = response.data;
-      setUploadedFiles(data);
+      setUploadedFiles(data)
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
       setError("Error fetching uploaded files. Please try again.");
-    }};
-
-    fetchUploadedFiles();
-  }, []);
-
-  const formatDate = (date) => {
-    if (!date || !isValid(new Date(date))) return "Invalid date";
-    return format(new Date(date), "MMM dd, yyyy, hh:mm a");
+    }
   };
 
   useEffect(() => {
-    localStorage.setItem('user_id',"2")
-    const user_id = localStorage.getItem('user_id');
+    localStorage.setItem('userId',"2")
+    const userId = localStorage.getItem('userId');
 
-    const socket = new WebSocket(`ws://localhost:5500/ws/${user_id}`);
+    const socket = new WebSocket(`ws://localhost:5500/ws/${userId}`);
 
     // Listen for messages from the WebSocket server
     socket.onmessage = (event) => {
@@ -152,25 +87,134 @@ function Temp() {
       });
     };
 
-    // Cleanup function to close WebSocket connection when component unmounts
     return () => {
       socket.close();
     };
   }, []);
 
-  const updatePdfStatus = (pdfId, newStatus) => {
-    setUploadedFiles((prevFiles) =>
-      prevFiles.map((file) =>
-        file.pdfId === pdfId ? { ...file, pdfStatus: newStatus } : file
-      )
+  useEffect(() => {
+    fetchTotalPages(); 
+    fetchUploadedFiles();
+  }, [currentPage]);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+  
+  const renderPagination = () => {
+    const pages = [];
+
+    const createPageButton = (pageNumber) => (
+      <button
+        key={pageNumber}
+        onClick={() => handlePageChange(pageNumber)}
+        style={currentPage === pageNumber ? styles.activePageButton : styles.pageButton}
+      >
+        {pageNumber}
+      </button>
     );
+
+    const addEllipsis = (key) => (
+      <span key={key} style={styles.ellipsis}>...</span>
+    );
+
+    if (currentPage >= 4) {
+      pages.push(createPageButton(1));
+      if(currentPage != 4){
+        pages.push(addEllipsis("start-ellipsis"));
+      }
+    }
+
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(createPageButton(i));
+    }
+
+    // Add last page and ellipsis if necessary
+    if (currentPage <= totalPages - 3) {
+      if (currentPage != totalPages - 3) {
+        pages.push(addEllipsis("end-ellipsis"));
+      }
+      pages.push(createPageButton(totalPages));
+    }
+
+    if(pages.length === 0){
+      return <h1 style={{color:"white"}}>Please Upload Pdfs!!</h1>
+    }
+
+    return pages;
+  };
+
+  const handleSubmit = async () => {
+    // event.preventDefault();
+    if (files.length > 0) {
+      setError(null);
+      try {
+        setLoading(true);
+        let newFiles =  await uploadPdf();
+        setLoading(false);
+        // setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
+        fetchTotalPages();
+        setCurrentPage(1);
+        fetchUploadedFiles();
+      } catch (error) {
+        console.error("Error uploading document:", error);
+        setError("Error uploading document. Please reload and try again.");
+      }
+      setFiles([]);
+    } else {
+      console.error("No files selected.");
+      setError("No files selected. Please select files to upload.");
+    }
+  };
+
+  const handleDelete = async (fileToDelete) => {
+    try {
+      // Only attempt to delete from the server if the file has been successfully uploaded
+      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
+        await api.post("/delete_pdf", { fileId: fileToDelete.id });
+      }
+      setUploadedFiles((prevUploadedFiles) =>
+        prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
+      );
+      if(uploadedFiles.length === 1){
+        setCurrentPage(currentPage - 1);
+        return;
+      }
+      fetchTotalPages();
+      fetchUploadedFiles();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      setError("Error deleting document. Please try again.");
+    }
+  };
+
+
+  const formatDate = (date) => {
+    if (!date || !isValid(new Date(date))) return "Invalid date";
+    return format(new Date(date), "MMM dd, yyyy, hh:mm a");
+  };
+
+
+  const fetchTotalPages = async () => {
+    const userId = localStorage.getItem('userId');
+    try {
+      const response = await api.get(`/get_total_pages/${userId}`);
+      const totalPdfCount = response.data;
+      setTotalPages(Math.ceil(totalPdfCount / 5)); // Assuming 5 PDFs per page
+    } catch (error) {
+      console.error("Error fetching total pages:", error);
+      setError("Error fetching total pages. Please try again.");
+    }
   };
   
   return (
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
       <div style={styles.container}>
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form style={styles.form}>
           <div {...getRootProps({ style: styles.dropzone })}>
             <input {...getInputProps()} />
             {isDragActive ? (
@@ -203,13 +247,7 @@ function Temp() {
             </div>
           )}
           {error && <p style={styles.error}>{error}</p>}
-          <button
-            type="submit"
-            disabled={files.length === 0 || loading}
-            style={styles.button}
-          >
-            {loading ? "Uploading..." : "Upload"}
-          </button>
+            <AnimatedButton submit={handleSubmit} isDisabled={(files.length === 0 || loading) ? true : false}/>
         </form>
         <div style={styles.tableContainer}>
           <table style={styles.table}>
@@ -228,23 +266,26 @@ function Temp() {
                   <td style={styles.tableCell}>
                     {file.pdfStatus === 'Pending' && <div style={styles.pendingStatus}><span>{file.pdfStatus}  </span><Loader /></div>}
                     {file.pdfStatus === 'Completed' && <div style={styles.completeStatus}>{file.pdfStatus}</div>}
+                    {file.pdfStatus === 'Exception' && <div style={styles.exceptionStatus}>{file.pdfStatus}</div>}
                   </td>
                   <td style={styles.tableCell}>{file.pdfName}</td>
                   <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
                   <td style={styles.tableCell}>PENDING</td>
                   <td style={styles.tableCell}>
                     <div style={styles.actions}>
+                    {/* {file.pdfStatus !== 'Pending' && ( */}
                       <button
                         style={styles.deleteButton}
                         onClick={() => handleDelete(file)}
                       >
                         Delete
                       </button>
+                      {/* )} */}
                       {file.pdfStatus === 'Completed' && (
                         <button
                           style={styles.viewButton}
                           onClick={() =>
-                            window.open(`/my-documents/${file.pdfId}`, '_blank')
+                            navigate(`/my-documents/${file.pdfId}`)
                           }
                         >
                           View
@@ -256,18 +297,21 @@ function Temp() {
               ))}
             </tbody>
           </table>
+          <div style={styles.paginationContainer}>
+            {renderPagination()}
+          </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
 const styles = {
   page: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: '100vh',
+    minHeight: '100vh',
     backgroundColor: '#2c3e50',
     padding: '20px',
     textAlign: 'center',
@@ -412,6 +456,15 @@ const styles = {
     fontFamily: "'Poppins', sans-serif",
     backgroundColor: '#FFC700'
   },
+  exceptionStatus: {
+    width:'100%',
+    padding: '5px 10px',
+    color: '#4E150C',
+    borderRadius: '5px',
+    fontWeight: '600',
+    fontFamily: "'Poppins', sans-serif",
+    backgroundColor: '#F05941'
+  },
   actions: {
     display: 'flex',
     justifyContent: 'center',
@@ -428,6 +481,35 @@ const styles = {
     cursor: 'pointer',
     fontFamily: "'Poppins', sans-serif",
   },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    margin: '20px 0 15px 0',
+  },
+  pageButton: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    cursor: 'pointer',
+    backgroundColor: '#34495e',
+    color: '#ecf0f1',
+    border: 'none',
+    borderRadius: '5px',
+  },
+  activePageButton: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    cursor: 'pointer',
+    backgroundColor: '#ecf0f1',
+    color: '#34495e',
+    border: 'none',
+    borderRadius: '5px',
+  },
+  ellipsis: {
+    padding: '5px 10px',
+    margin: '0 5px',
+    color: '#ecf0f1',
+  },
+
 };
 
-export default Temp;
+export default UploadInvoicePage;
