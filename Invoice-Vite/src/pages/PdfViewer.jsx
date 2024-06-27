@@ -18,7 +18,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const scale_val = 1.9;
 
   const handleBack = () => {
-    navigate('/')
+    navigate('/Uploadinvoice')
   };
 
   const handleApprove = async () => {
@@ -87,12 +87,12 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
 
   return (
     <div>
-      <div className="navbar">
+      <div className="pdf-navbar">
         <button onClick={handleBack}>Back</button>
         <h3>{pdfName}</h3>
       </div>
-      <div className="container">
-        <div className="content">
+      <div className="container-pdfview">
+        <div className="pdf-content">
           {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val}/> : <div className="loader">Loading...</div>}
           <div className="action-buttons">
             <button className="approve-btn" onClick={handleApprove}>Approve</button>
