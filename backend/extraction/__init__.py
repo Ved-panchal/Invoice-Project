@@ -1,0 +1,1 @@
+from .extract import _store_pdf_data as store_pdf_data

@@ -1,3 +1,6 @@
-.env
-static
 __pycache__
+static
+.env
+zz*
+test
+*test*

@@ -1,0 +1,21 @@
+.sidebar {
+  width: 20vw;
+  height: 100vh;
+  background-color: #ffffff;
+  transition: width 0.3s ease;
+}
+.nav-link:hover{
+  background-color: black;
+}
+
+.imgmainlogo{
+  height: 2.5rem;
+  width: 2.5rem;
+  object-fit: cover;
+}
+
+.navicons{
+  height: 1.7rem;
+  width: 1.7rem;
+  object-fit: cover;
+}
