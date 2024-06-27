@@ -1,0 +1,22 @@
+.Header{
+    background-color: #2c3e50;
+}
+
+.Header-Title{
+    color: #fff;
+    text-align: center;
+}
+
+.Nav-Links-Docs,.Nav-Links-About,.Nav-Links-Contact{
+    color: #fff;
+}
+
+.Nav-Links-Docs:hover,.Nav-Links-About:hover,.Nav-Links-Contact:hover{
+    color: #6d849b;
+    text-decoration: none;
+}
+
+.Nav-Links-Docs:active,.Nav-Links-About:active,.Nav-Links-Contact:active{
+    color: #6d849b;
+    text-decoration: none;
+}

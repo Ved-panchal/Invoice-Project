@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
-// import api from '../utils/UserApi';
 import api from '../utils/apiUtils';
-// import '../CSS/Signin.css'; // Import the CSS file
 
 const Signin = () => {
   const [username, setUsername] = useState('');
@@ -38,7 +36,6 @@ const Signin = () => {
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length === 0) {
       try {
-        // Create URLSearchParams object to encode data as application/x-www-form-urlencoded
         const params = new URLSearchParams();
         params.append('username', username);
         params.append('password', password);

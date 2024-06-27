@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { format, isValid } from "date-fns";
 import Loader from "../Components/Loader/Loader";
@@ -307,6 +307,7 @@ function UploadInvoicePage() {
 
 const styles = {
   page: {
+    width:"100vw",
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -314,7 +315,6 @@ const styles = {
     backgroundColor: '#2c3e50',
     padding: '20px',
     textAlign: 'center',
-    // letter-spacing: 1px;
     letterSpacing:'1px',
     fontFamily: "'Poppins', sans-serif",
   },
