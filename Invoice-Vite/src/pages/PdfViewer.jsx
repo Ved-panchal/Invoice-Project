@@ -89,9 +89,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     <div>
       <div className="navbar">
         <button onClick={handleBack}>Back</button>
-        <span></span>
-        <h1>Pdf Viewer
-        </h1>
+        <h3>{pdfName}</h3>
       </div>
       <div className="container">
         <div className="content">

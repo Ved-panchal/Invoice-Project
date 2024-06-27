@@ -59,11 +59,11 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
     cursor: pointer;
 }
 
-.navbar h1 {
+.navbar h3 {
     width: 100%;
     margin: 0;
     color: #fff;
-    text-align: center;
+    text-align: right;
 }
 
 /* Custom scrollbar styles */
