@@ -6,7 +6,8 @@ import {
 import "@coreui/coreui/dist/css/coreui.min.css";
 
 import { useState } from "react";
-import LoginSignupTab from "./Tabs/LoginSignupTab";
+import LoginForm from "./LoginForm/LoginForm";
+import "../../CSS/LoginSignUpModal.css";
 
 const LoginSignUpModal = () => {
     const [visible, setVisible] = useState(false)
@@ -17,8 +18,8 @@ const LoginSignUpModal = () => {
           visible={visible}
           onClose={() => setVisible(false)}
         >
-          <CModalBody>
-            <LoginSignupTab/>
+          <CModalBody style={{padding:"0"}}>
+            <LoginForm/>
           </CModalBody>
         </CModal>
       </>

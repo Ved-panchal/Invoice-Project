@@ -43,7 +43,7 @@ const App = () => {
 
 const ConditionalSidebar = () => {
   const location = useLocation();
-  return location.pathname !== "/" ? <Sidebar /> : null;
+  return (location.pathname !== "/") && (location.pathname !== "/Docs") && (location.pathname !== "/AboutUs") && (location.pathname !== "/Contact") && (!location.pathname.includes("my-documents")) ? <Sidebar /> : null;
 };
 
 const ConditionalHeader = () => {
