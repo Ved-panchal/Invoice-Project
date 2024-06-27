@@ -77,9 +77,9 @@ async def delete_file(payload: dict, user=Depends(login_manager)):
 def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
     try:
         user_id = user['userId']
-        pdf_id = ObjectId(invoice_id)
+        pdf_id = ObjectId(pdf_id)
         data = mongo_conn.get_pdf_data_collection().find_one({"_id": pdf_id})
-        pdf_name = get_pdf_name(user_id, pdf_id)
+        pdf_name = get_pdf_name(user_id, invoice_id + "0")
 
         if data:
             data = utils.convert_objectid(data)
@@ -113,9 +113,9 @@ def get_total_pages(user_id: str, user=Depends(login_manager)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def get_pdf_name(user_id: str, pdf_id: ObjectId) -> str:
+def get_pdf_name(user_id: str, pdf_id: str) -> str:
     # Find pdf_id which is inside data and return its pdf name
-    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": pdf_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
+    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"pdfData.pdfId": pdf_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
     if pdf:
         return pdf['pdfData']['pdfName']
     raise HTTPException(status_code=404, detail="PDF not found")
