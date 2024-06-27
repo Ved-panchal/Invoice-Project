@@ -1,11 +1,14 @@
 from fastapi import File, HTTPException, UploadFile, BackgroundTasks, APIRouter, Depends
+from starlette.responses import Response
 
-import os
+import os, json
 from datetime import datetime
 from pathlib import Path
 from bson import ObjectId
 
-from util import utils
+from models import PDFDataStatus, PDFUploadStatus, UserPDFMappingSchema
+from util import utils, pdf_utils
+from extraction import get_pdf_name
 from database import mongo_conn
 from queue_service import queue_manager
 from routes import login_manager, STATIC_DIR
@@ -25,12 +28,13 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
             pdf_data = {
                 "userId": user_id,
                 "createdAt": datetime.now(),
-                "pdfData":{
+                "pdfData": {
                     "pdfId":"",
-                    "pdfName":document.filename,
-                    "pdfStatus":"Pending"
+                    "pdfName": document.filename,
+                    "pdfStatus": PDFUploadStatus.PENDING
                 }
             }
+            # print(pdf_data)
             result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
             pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
             pdf_data['pdfData']['id'] = pdf_data['_id']
@@ -54,12 +58,16 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
     return {"success": True, "result": response}
 
 @api_router.post('/delete_pdf')
-async def delete_file(payload: dict, user=Depends(login_manager)):
+async def delete_file(payload: dict, response: Response, user=Depends(login_manager)):
     mapping_obj_id = payload['fileId']
     try:
         data = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": ObjectId(mapping_obj_id)})
         if data is not None:
             user_id = data['userId']
+            # If user id received from database and user id in session is not same, throw error
+            if user_id != user['userId']:
+                raise HTTPException(status_code=401, detail="Invalid login, please login with valid credentials.")
+
             pdf_id = data['pdfData']['pdfId'][:-1]
 
             mongo_conn.get_user_pdf_mapping_collection().delete_one({"_id": ObjectId(mapping_obj_id)})
@@ -69,6 +77,9 @@ async def delete_file(payload: dict, user=Depends(login_manager)):
                 if file_path.exists():
                     os.remove(file_path)
                 mongo_conn.get_pdf_data_collection().delete_one({"_id": ObjectId(pdf_id)})
+            response.status_code = 200
+            response.body = json.dumps({"message": "File deleted successfully"}).encode()
+            return response
     except Exception as e:
         print(f'Error: {str(e)}')
         raise HTTPException(status_code=500, detail=str(e))
@@ -76,19 +87,12 @@ async def delete_file(payload: dict, user=Depends(login_manager)):
 @api_router.post('/invoice/get_data/{invoice_id}')
 def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
     try:
-        print("user", user)
         user_id = user['userId']
-        pdf_id = ObjectId(invoice_id)
-        print("pdf_id", pdf_id)
-        data = mongo_conn.get_pdf_data_collection().find_one({"_id": pdf_id})
-        print("data1", data)
+        data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
         pdf_name = get_pdf_name(user_id, invoice_id + "0")
-        print("pdf_name", pdf_name)
         if data:
-            print("data2", data)
             data = utils.convert_objectid(data)
             data['pdfName'] = pdf_name
-            print("data3", data)
 
         return data
     except Exception as e:
@@ -118,11 +122,32 @@ def get_total_pages(user_id: str, user=Depends(login_manager)):
         return mongo_conn.get_user_pdf_mapping_collection().count_documents({"userId": user_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-def get_pdf_name(user_id: str, pdf_id: str) -> str:
-    # Find pdf_id which is inside data and return its pdf name
-    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"pdfData.pdfId": pdf_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
-    print("pdf", pdf)
-    if pdf:
-        return pdf['pdfData']['pdfName']
-    raise HTTPException(status_code=404, detail="PDF not found")
+    
+@api_router.post('/set_pdf_status')
+def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager)):
+    try:
+        user_id = user['userId']
+        invoice_id = payload['invoiceId']
+        updated_data = payload['updatedData']
+        pdf_status = payload['pdfStatus']
+        # invoice_id without 0 and .pdf added
+        pdf_path = STATIC_DIR / user_id / (invoice_id + "0.pdf")
+        update_operation = {
+            '$set': {
+                'data': pdf_utils.get_cords_of_word(updated_data, pdf_path),
+                'pdfDataStatus': PDFDataStatus.APPROVED if pdf_status == "1" else PDFDataStatus.REJECTED
+            }
+        }
+        result = mongo_conn.get_pdf_data_collection().update_one({"_id": ObjectId(invoice_id)}, update_operation)
+        if result.modified_count == 1:
+            response.status_code = 200
+            response.body = json.dumps({"message": "PDF data approved."}).encode()
+        elif result.matched_count == 1 and result.modified_count == 0:
+            response.status_code = 200
+            response.body = json.dumps({f"message": "PDF data is already approved or rejected."}).encode()
+        elif result.matched_count == 0:
+            response.status_code = 400
+            response.body = json.dumps({f"message": "PDF is not found."}).encode()
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")

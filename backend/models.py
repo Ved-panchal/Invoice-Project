@@ -18,12 +18,25 @@ class User(BaseModel):
     username: str
     password: str
 
-class PDFData(BaseModel):
+class PDFUploadStatus(str, Enum):
+    PENDING = "Pending"
+    COMPLETED = "Completed"
+    EXCEPTION = "Exception"
+
+class UserPDFMappingData(BaseModel):
     pdfId: str
     pdfName: str
-    pdfStatus: str
+    pdfStatus: PDFUploadStatus
 
-class PDFSchema(BaseModel):
+class UserPDFMappingSchema(BaseModel):
     userId: str
     createdAt: datetime
-    pdfData: PDFData
+    pdfData: UserPDFMappingData
+
+class PDFDataStatus(str, Enum):
+    APPROVED = "approved".upper()
+    REJECTED = "rejected".upper()
+
+class PDFData(BaseModel):
+    data: List[object]
+    pdfDataStatus: PDFDataStatus

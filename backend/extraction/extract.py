@@ -4,6 +4,7 @@ from models import TextData
 import json, os
 from bson import ObjectId
 
+from models import PDFUploadStatus
 from util import pdf_utils
 from .prompt import generate_dynamic_prompt, _default_fields
 from database import mongo_conn
@@ -122,7 +123,7 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         update_operation = {
             '$set': {
                 'pdfData.pdfId': new_file_id,
-                'pdfData.pdfStatus': 'Completed'
+                'pdfData.pdfStatus': PDFUploadStatus.COMPLETED
             }
         }
         pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
@@ -134,9 +135,16 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         update_operation = {
             '$set': {
                 'pdfData.pdfId': '',
-                'pdfData.pdfStatus': 'Exception'
+                'pdfData.pdfStatus': PDFUploadStatus.EXCEPTION
             }
         }
         pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
-        pdf_mapping.update_one({'_id':obj_id}, update_operation)
+        pdf_mapping.update_one({'_id': obj_id}, update_operation)
         raise Exception("Exception from store_pdf_data: ", str(e))
+
+def _get_pdf_name(user_id: str, invoice_id: str) -> str:
+    # Find pdf_id which is inside data and return its pdf name
+    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"pdfData.pdfId": invoice_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
+    if pdf:
+        return pdf['pdfData']['pdfName']
+    raise HTTPException(status_code=404, detail="PDF not found")
