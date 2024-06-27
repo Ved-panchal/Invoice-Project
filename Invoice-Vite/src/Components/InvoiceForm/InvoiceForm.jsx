@@ -315,6 +315,27 @@ const InvoiceForm = ({ invoiceData, scale}) => {
     };
   }, [data_arr, image_canvas]);
 
+  const handleApprove = async () => {
+    try {
+      // Send the approval status to the server
+      await api.post('/invoice/approve', { fileName });
+      alert('Invoice approved');
+    } catch (error) {
+      console.error('Error approving invoice', error);
+    }
+  };
+
+  const handleReject = async () => {
+    try {
+      // Send the rejection status to the server
+      await api.post('/invoice/reject', { fileName });
+      alert('Invoice rejected');
+    } catch (error) {
+      console.error('Error rejecting invoice', error);
+    }
+  };
+
+
   const handleAddRow = () => {
     setInvoice((prevInvoice) => ({
       ...prevInvoice,
@@ -374,6 +395,7 @@ const InvoiceForm = ({ invoiceData, scale}) => {
   };
 
   return (
+    <div>
     <div className="form-section">
       <h2 className="form-heading">Invoice Details</h2>
       <header>
@@ -398,10 +420,10 @@ const InvoiceForm = ({ invoiceData, scale}) => {
       </header>
       <main>
         <div className="table-container">
+          {invoice.DocumentLines[0] && 
           <table className="invoice-table">
             <thead>
               <tr>
-                {console.log("key", Object.keys(invoice.DocumentLines[0]))}
                 {Object.keys(invoice.DocumentLines[0]).map((item) => {
                   return (<th>{item}</th>)
                 })}
@@ -437,12 +459,17 @@ const InvoiceForm = ({ invoiceData, scale}) => {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table>}
         </div>
         <div className="table-buttons">
           <button className="Addrow-btn" onClick={handleAddRow}>Add Row</button>
         </div>
       </main>
+    </div>
+      <div className="action-buttons">
+        <button className="approve-btn" onClick={handleApprove}>Approve</button>
+        <button className="reject-btn" onClick={handleReject}>Reject</button>
+      </div>
     </div>
   );
 };
