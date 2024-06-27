@@ -11,7 +11,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const canvasContainerRef = useRef(null);
-  const [numPages, setNumPages] = useState(0);
+  const [pdfName, setPdfName] = useState("");
   const [data, setData] = useState([]);
   const [imgCondition, setImageCondition] = useState(false);
   const navigate = useNavigate();
@@ -53,6 +53,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
           },
         });
         setData(response.data['data']);
+        setPdfName(response.data['pdfName'])
       } catch (error) {
         console.log('Error getting data', error);
       }
@@ -65,7 +66,6 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     if (!imgCondition) {
       const loadingTask = pdfjsLib.getDocument(pdfUrl);
       loadingTask.promise.then((pdf) => {
-        setNumPages(pdf.numPages);
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
           pdf.getPage(pageNumber).then((page) => {
@@ -93,7 +93,9 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     <div>
       <div className="navbar">
         <button onClick={handleBack}>Back</button>
-        <h1>Pdf Viewer</h1>
+        <span>{pdfName}</span>
+        <h1>Pdf Viewer
+        </h1>
       </div>
       <div className="container">
         <div className="content">

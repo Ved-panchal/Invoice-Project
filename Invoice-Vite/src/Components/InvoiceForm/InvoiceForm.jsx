@@ -222,7 +222,7 @@
 import React, { useEffect, useState } from 'react';
 import '../../CSS/InvoiceForm.css';
 
-const InvoiceForm = ({ invoiceData, scale }) => {
+const InvoiceForm = ({ invoiceData, scale}) => {
   const [invoice, setInvoice] = useState(invoiceData[0]);
   const data_arr = invoiceData.slice(1, invoiceData.length);
   const [image_canvas, setImage_canvas] = useState([]);
