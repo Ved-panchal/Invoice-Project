@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import 'pdfjs-dist/web/pdf_viewer.css';
-import axios from 'axios';
+import api from '../utils/apiUtils'
 import InvoiceForm from '../Components/InvoiceForm/InvoiceForm';
 import '../CSS/PdfViewer.css';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +24,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const handleApprove = async () => {
     try {
       // Send the approval status to the server
-      await axios.post('http://localhost:5500/invoice/approve', { fileName });
+      await api.post('/invoice/approve', { fileName });
       alert('Invoice approved');
     } catch (error) {
       console.error('Error approving invoice', error);
@@ -34,7 +34,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const handleReject = async () => {
     try {
       // Send the rejection status to the server
-      await axios.post('http://localhost:5500/invoice/reject', { fileName });
+      await api.post('/invoice/reject', { fileName });
       alert('Invoice rejected');
     } catch (error) {
       console.error('Error rejecting invoice', error);
@@ -47,11 +47,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
         setImageCondition(true);
       }
       try {
-        const response = await axios.get(`http://localhost:5500/invoice/get_data/${fileName}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await api.post(`/invoice/get_data/${fileName}`);
         setData(response.data['data']);
         setPdfName(response.data['pdfName'])
       } catch (error) {
@@ -93,7 +89,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     <div>
       <div className="navbar">
         <button onClick={handleBack}>Back</button>
-        <span>{pdfName}</span>
+        <span></span>
         <h1>Pdf Viewer
         </h1>
       </div>
@@ -107,7 +103,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
         </div>
         {imgCondition ? (
           <div className="pdf-view">
-            <img src={`http://localhost:5500/static/1/${fileCode}.JPEG`} alt="" style={{ height: '100%', width: '100%' }} />
+            <img src={`/static/1/${fileCode}.JPEG`} alt="" style={{ height: '100%', width: '100%' }} />
           </div>
         ) : (
           <div className="pdf-view" ref={canvasContainerRef}></div>
