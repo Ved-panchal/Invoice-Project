@@ -16,15 +16,14 @@ api_router = APIRouter()
 async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
     response, filenames = [], []
     try:
-        user_id1 = user['username']
-        print(user_id1)
+        user_id = user['userId']
         user_dir = STATIC_DIR / user_id
         if not user_dir.exists():
             os.makedirs(user_dir)
 
         for document in documents:
             pdf_data = {
-                "userId": int(user_id),
+                "userId": user_id,
                 "createdAt": datetime.now(),
                 "pdfData":{
                     "pdfId":"",
@@ -75,19 +74,24 @@ async def delete_file(payload: dict, user=Depends(login_manager)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get('/invoice/get_data/{invoice_id}')
-def get_data_from_mongo(invoice_id: str):
+def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
     try:
-        data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
+        user_id = user['userId']
+        pdf_id = ObjectId(invoice_id)
+        data = mongo_conn.get_pdf_data_collection().find_one({"_id": pdf_id})
+        pdf_name = get_pdf_name(user_id, pdf_id)
 
         if data:
             data = utils.convert_objectid(data)
+            data['pdfName'] = pdf_name
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post('/get_pdfs/{user_id}')
-def get_page_data_from_userid(user_id: int, payload: dict, user=Depends(login_manager)):
+def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_manager)):
     try:
+        user_id = user['userId']
         page = payload['page'] or 1
         count = payload['count'] or 5
         response = []
@@ -102,8 +106,16 @@ def get_page_data_from_userid(user_id: int, payload: dict, user=Depends(login_ma
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get('/get_total_pages/{user_id}')
-def get_total_pages(user_id: int, user=Depends(login_manager)):
+def get_total_pages(user_id: str, user=Depends(login_manager)):
     try:
+        user_id = user['userId']
         return mongo_conn.get_user_pdf_mapping_collection().count_documents({"userId": user_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+def get_pdf_name(user_id: str, pdf_id: ObjectId) -> str:
+    # Find pdf_id which is inside data and return its pdf name
+    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": pdf_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
+    if pdf:
+        return pdf['pdfData']['pdfName']
+    raise HTTPException(status_code=404, detail="PDF not found")
