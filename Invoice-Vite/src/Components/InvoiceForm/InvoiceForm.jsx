@@ -322,7 +322,7 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
     console.log("in handle submit")
     try {
       // Send the rejection status to the server
-      let response = await api.post('/set_pdf_status', { invoiceId:fileName, updatedData:invoice, pdfStatus:pdfStatus});
+      let response = await api.post('/set_pdf_status', { invoiceId:fileName, updatedData:invoice, pdfApprovalStatus:pdfStatus});
       console.log("response", response)
     } catch (error) {
       console.error('Error rejecting invoice', error);

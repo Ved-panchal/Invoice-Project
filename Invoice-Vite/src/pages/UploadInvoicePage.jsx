@@ -269,7 +269,7 @@ function UploadInvoicePage() {
                   </td>
                   <td style={styles.tableCell}>{file.pdfName}</td>
                   <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
-                  <td style={styles.tableCell}>PENDING</td>
+                  <td style={styles.tableCell}>{file.pdfApprovalStatus}</td>
                   <td style={styles.tableCell}>
                     <div style={styles.actions}>
                     {/* {file.pdfStatus !== 'Pending' && ( */}
