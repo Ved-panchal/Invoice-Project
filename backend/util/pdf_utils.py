@@ -41,7 +41,7 @@ class Pdf_Utils:
         Returns:
         - list: A list of dictionaries containing the extracted data with coordinates for each page.
         """
-        all_pages_data = []
+        all_pages_data = [gpt_json_data]
         not_include_keys = ['DiscountPercent', 'Quantity', 'TaxCode', 'UnitPrice']
         with pdfplumber.open(pdf_path) as pdf:
             for idx, page in enumerate(pdf.pages):
