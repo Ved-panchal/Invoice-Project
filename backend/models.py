@@ -34,6 +34,7 @@ class UserPDFMappingSchema(BaseModel):
     pdfData: UserPDFMappingData
 
 class PDFDataStatus(str, Enum):
+    PENDING = "pending".upper()
     APPROVED = "approved".upper()
     REJECTED = "rejected".upper()
 
