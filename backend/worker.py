@@ -1,4 +1,5 @@
-import pika, sys, json, time
+import pika, sys, json, os
+from time import time
 from pika.exceptions import AMQPConnectionError, ChannelWrongStateError
 from loguru import logger
 
@@ -8,8 +9,11 @@ from pathlib import Path
 
 from extraction import store_pdf_data
 
+# Get the base filename without the extension
+filename = os.path.basename(__file__).split('.')[0]
+
 # Configure loguru
-logger.add("file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention of 1 month
+logger.add(f"{filename}file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention of 1 month
 
 if len(sys.argv) != 2:
     logger.error("Usage: python worker.py <API_KEY_NO>")

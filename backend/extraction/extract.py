@@ -2,6 +2,7 @@ from together import Together
 from fastapi import HTTPException
 from bson import ObjectId
 from loguru import logger
+from time import time
 import json, os
 
 from models import TextData, PDFUploadStatus
@@ -9,8 +10,10 @@ from util import pdf_utils
 from .prompt import generate_dynamic_prompt, _default_fields
 from database import mongo_conn
 
+filename = os.path.basename(__file__).split('.')[0]
+
 # Configure loguru
-logger.add("file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention
+logger.add(f"{filename}file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention
 
 @logger.catch
 def _get_data_from_gpt(client: Together, text, user_id: str) -> str:

@@ -31,7 +31,8 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
                 "pdfData": {
                     "pdfId":"",
                     "pdfName": document.filename,
-                    "pdfStatus": PDFUploadStatus.PENDING
+                    "pdfStatus": PDFUploadStatus.PENDING,
+                    "pdfApprovalStatus": PDFDataStatus.PENDING
                 }
             }
             # print(pdf_data)
@@ -122,30 +123,36 @@ def get_total_pages(user_id: str, user=Depends(login_manager)):
         return mongo_conn.get_user_pdf_mapping_collection().count_documents({"userId": user_id})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @api_router.post('/set_pdf_status')
 def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager)):
     try:
         user_id = user['userId']
         invoice_id = payload['invoiceId']
         updated_data = payload['updatedData']
-        pdf_status = payload['pdfStatus']
+        pdf_approval_status = payload['pdfApprovalStatus']
         # invoice_id without 0 and .pdf added
         pdf_path = STATIC_DIR / user_id / (invoice_id + "0.pdf")
-        update_operation = {
+        update_operation_pdf_data = {
             '$set': {
                 'data': pdf_utils.get_cords_of_word(updated_data, pdf_path),
-                'pdfDataStatus': PDFDataStatus.APPROVED if pdf_status == "1" else PDFDataStatus.REJECTED
+                # 'pdfApprovalStatus': PDFDataStatus.APPROVED if pdf_status == "1" else PDFDataStatus.REJECTED
             }
         }
-        result = mongo_conn.get_pdf_data_collection().update_one({"_id": ObjectId(invoice_id)}, update_operation)
-        if result.modified_count == 1:
+        update_operation_pdf_mapping_data = {
+            '$set': {
+                'pdfData.pdfApprovalStatus': PDFDataStatus.APPROVED if pdf_approval_status == "1" else PDFDataStatus.REJECTED
+            }
+        }
+        result_pdf_data = mongo_conn.get_pdf_data_collection().update_one({"_id": ObjectId(invoice_id)}, update_operation_pdf_data)
+        result_pdf_mapping_data = mongo_conn.get_user_pdf_mapping_collection().update_one({ "pdfData.pdfId": (invoice_id + "0") }, update_operation_pdf_mapping_data)
+        if result_pdf_data.modified_count == 1 and result_pdf_mapping_data.modified_count == 1:
             response.status_code = 200
             response.body = json.dumps({"message": "PDF data approved."}).encode()
-        elif result.matched_count == 1 and result.modified_count == 0:
+        elif result_pdf_data.matched_count == 1 and result_pdf_data.modified_count == 0:
             response.status_code = 200
             response.body = json.dumps({f"message": "PDF data is already approved or rejected."}).encode()
-        elif result.matched_count == 0:
+        elif result_pdf_data.matched_count == 0:
             response.status_code = 400
             response.body = json.dumps({f"message": "PDF is not found."}).encode()
         return response
