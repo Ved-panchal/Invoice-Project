@@ -1,6 +1,7 @@
 __pycache__
 static
 .env
+logs
 zz*
 test
 *test*

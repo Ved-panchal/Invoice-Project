@@ -27,12 +27,12 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
         for document in documents:
             pdf_data = {
                 "userId": user_id,
-                "createdAt": datetime.now(),
                 "pdfData": {
                     "pdfId":"",
                     "pdfName": document.filename,
                     "pdfStatus": PDFUploadStatus.PENDING,
-                    "pdfApprovalStatus": PDFDataStatus.PENDING
+                    "pdfApprovalStatus": PDFDataStatus.PENDING,
+                    "createdAt": datetime.now(),
                 }
             }
             # print(pdf_data)
@@ -108,7 +108,7 @@ def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_ma
         response = []
         for record in mongo_conn.get_user_pdf_mapping_collection().find({"userId": user_id}).sort([("_id", -1)]).skip((page - 1) * count).limit(count):
             record["pdfData"]["id"] = utils.convert_objectid(record["_id"])
-            record["pdfData"]["createdAt"] = record["createdAt"]
+            # record["pdfData"]["createdAt"] = record["createdAt"]
             response.append(record)
         transformed_data = [item["pdfData"] for item in response]
         return transformed_data
