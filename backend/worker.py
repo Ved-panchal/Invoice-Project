@@ -1,5 +1,6 @@
 import pika, sys, json, time
 from pika.exceptions import AMQPConnectionError, ChannelWrongStateError
+from loguru import logger
 
 from together import Together
 from decouple import config
@@ -7,8 +8,11 @@ from pathlib import Path
 
 from extraction import store_pdf_data
 
+# Configure loguru
+logger.add("file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention of 1 month
+
 if len(sys.argv) != 2:
-    print("Usage: python worker.py <API_KEY_NO>")
+    logger.error("Usage: python worker.py <API_KEY_NO>")
     exit(1)
 
 API_KEY_NO = sys.argv[1]  # Read the API key from command-line arguments
@@ -29,48 +33,54 @@ class PikaWorker:
         self.channel.queue_declare(queue=self.publish_queue, durable=True)
         self.channel.basic_consume(queue=self.publish_queue, on_message_callback=self.callback)
 
-
+    @logger.catch
     def start(self):
-        print(f'Worker-{API_KEY_NO} started...')
+        logger.info(f'Worker-{API_KEY_NO} started...')
         self.channel.start_consuming()
 
+    @logger.catch
     def callback(self, ch, method, props, body):
         try:
-            print('Received task')
-            print(f'Processing task: {body}')
+            logger.info('Received task')
+            logger.debug(f'Processing task: {body}')
 
             # Process PDF here
             response = store_pdf_data(client, props.headers['user_id'], body.decode(), STATIC_DIR)
-            print(f'Response: {response}')
-            response_json = json.dumps({'pdfStatus':'Completed', 'pdfId': response, 'id': body.decode().split('.')[0]})
+            logger.info(f'New file Id: {response}')
+            response_json = json.dumps({'pdfStatus': 'Completed', 'pdfId': response, 'id': body.decode().split('.')[0]})
         except Exception as e:
-            print(f'Error processing task.\nDetails: {e}')
-            response_json = json.dumps({'error': "Exception from worker...", 'pdfStatus':'Exception', 'id': body.decode().split('.')[0]})
+            logger.exception(f'Error processing task: {e}')
+            response_json = json.dumps({'error': "Exception from worker...", 'pdfStatus': 'Exception', 'id': body.decode().split('.')[0]})
 
         try:
-            print(f'task completed')
-            self.channel.basic_publish(exchange='',
+            logger.info('Task completed')
+            self.channel.basic_publish(
+                exchange='',
                 routing_key=props.reply_to,
-                properties=pika.BasicProperties(correlation_id = props.correlation_id, headers=props.headers),
-                body=response_json)
+                properties=pika.BasicProperties(correlation_id=props.correlation_id, headers=props.headers),
+                body=response_json
+            )
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            print('Response sent...')
+            logger.info('Response sent')
         except ConnectionResetError as cre:
-            print(f'Connection error.\nDetails: {cre}')
+            logger.exception(f'Connection error: {cre}')
             # Start the worker again...
             raise
-
         except Exception as e:
-            print(f'Error sending response.\nDetails: {e}')
+            logger.exception(f'Error sending response: {e}')
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
+@logger.catch
 def main():
     while True:
         try:
             pika_worker = PikaWorker()
             pika_worker.start()
         except (AMQPConnectionError, ConnectionResetError, ConnectionError, ChannelWrongStateError) as e:
-            print(f"Connection error: {e}. Retrying in 5 seconds...")
+            logger.exception(f"Connection error: {e}. Retrying in 5 seconds...")
+            time.sleep(5)
+        except Exception as e:
+            print(f"Unknown error: {str(e)}. Retrying in 5 seconds...")
             time.sleep(5)
 
 if __name__ == '__main__':

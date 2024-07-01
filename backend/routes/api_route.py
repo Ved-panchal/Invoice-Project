@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from bson import ObjectId
 
-from models import PDFDataStatus, PDFUploadStatus, UserPDFMappingSchema
+from models import PDFDataStatus, PDFUploadStatus
 from util import utils, pdf_utils
 from extraction import get_pdf_name
 from database import mongo_conn
