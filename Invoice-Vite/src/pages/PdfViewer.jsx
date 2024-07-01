@@ -30,6 +30,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       }
       try {
         const response = await api.post(`/invoice/get_data/${fileName}`);
+        console.log("data", response.data)
         setData(response.data['data']);
         setPdfName(response.data['pdfName'])
       } catch (error) {
@@ -44,7 +45,6 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     if (!imgCondition) {
       const loadingTask = pdfjsLib.getDocument(pdfUrl);
       loadingTask.promise.then((pdf) => {
-
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
           pdf.getPage(pageNumber).then((page) => {
             const viewport = page.getViewport({ scale: scale_val });
@@ -77,7 +77,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       </div>
       <div className="container-pdfview">
         <div className="pdf-content">
-          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val}/> : <div className="loader">Loading...</div>}
+          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val} fileName={fileName}/> : <div className="loader">Loading...</div>}
         </div>
         {imgCondition ? (
           <div className="pdf-view">
