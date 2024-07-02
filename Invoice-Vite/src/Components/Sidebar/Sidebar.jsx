@@ -37,7 +37,7 @@ const Sidebar = () => {
           <div style={{ marginRight: "2rem" }}>
             <img className={styles.navicons} src={Prompt} alt="Prompt" />
           </div>
-          Custom Prompt <CBadge color="warning ms-auto">Upcoming</CBadge>
+          Custom Prompt
         </CNavItem>
       </CSidebarNav>
     </CSidebar>

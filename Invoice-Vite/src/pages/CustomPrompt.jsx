@@ -7,10 +7,18 @@ function CustomPrompt() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    String.prototype.toTitleCase = function() {
+        return this
+            .toLowerCase()
+            .split(' ')
+            .map(function(word) {
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            })
+            .join(' ');
+    }
     const fetchFields = async () => {
       try {
         const response = await api.get(`/get_fields`);
-        console.log("response", response);
         const data = response.data.fields;
         const { direct, table } = formatFields(data);
         setDirectFields(direct);
@@ -20,6 +28,7 @@ function CustomPrompt() {
         setError("Error fetching fields. Please try again.");
       }
     };
+
 
     fetchFields();
   }, []);
@@ -88,12 +97,12 @@ function CustomPrompt() {
 
   const formatDataForApi = () => {
     const direct = directFields.reduce((acc, field) => {
-      acc[field.name] = field.description;
+      acc[field.name.toTitleCase()] = field.description;
       return acc;
     }, {});
 
     const table = tableFields.reduce((acc, field) => {
-      acc[field.name] = field.description;
+      acc[field.name.toTitleCase()] = field.description;
       return acc;
     }, {});
 
