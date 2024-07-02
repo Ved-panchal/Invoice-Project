@@ -21,3 +21,9 @@ body {
 .sidebar:hover ~ .main-content {
   margin-left: 20vw;
 }
+
+
+::selection{
+  background: #465f6b;
+  color: #fff;
+}

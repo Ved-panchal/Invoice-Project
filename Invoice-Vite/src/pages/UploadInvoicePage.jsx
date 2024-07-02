@@ -102,7 +102,6 @@ function UploadInvoicePage() {
   
   const renderPagination = () => {
     const pages = [];
-
     const createPageButton = (pageNumber) => (
       <button
         key={pageNumber}
@@ -112,11 +111,9 @@ function UploadInvoicePage() {
         {pageNumber}
       </button>
     );
-
     const addEllipsis = (key) => (
       <span key={key} style={styles.ellipsis}>...</span>
     );
-
     if (currentPage >= 4) {
       pages.push(createPageButton(1));
       if(currentPage != 4){
@@ -147,7 +144,6 @@ function UploadInvoicePage() {
   };
 
   const handleSubmit = async () => {
-    // event.preventDefault();
     if (files.length > 0) {
       setError(null);
       try {

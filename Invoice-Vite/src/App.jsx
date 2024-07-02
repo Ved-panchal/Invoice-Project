@@ -6,6 +6,7 @@ import Loader from './Components/Loader/Loader';
 import Header from './Components/Header/Header';
 import Home from './pages/Home';  
 import './App.css';
+import CustomPrompt from './pages/CustomPrompt';
 
 const App = () => {
   return (
@@ -17,6 +18,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/uploadinvoice" element={<UploadInvoicePage />} />
+            <Route path="/customprompt" element={<CustomPrompt />} />
             <Route path="/my-documents/:fileCode" element={<MyDocument />} />
             <Route path="/loader" element={
               <div style={{

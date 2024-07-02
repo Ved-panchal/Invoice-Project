@@ -31,7 +31,7 @@ const Sidebar = () => {
           Upload Invoice
         </CNavItem>
         <CNavItem
-          href="#"
+          href="/customprompt"
           style={{ fontWeight: "600" }}
         >
           <div style={{ marginRight: "2rem" }}>
