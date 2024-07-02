@@ -1,20 +1,12 @@
 import pika, sys, json, time
 from pika.exceptions import AMQPConnectionError, ChannelWrongStateError
-# from loguru import logger
 
 from together import Together
 from decouple import config
 from pathlib import Path
 
+from logger import logger
 from extraction import store_pdf_data
-# from logger_module import loggerObj
-from loguru import logger
-
-# # Get the base filename without the extension
-# filename = os.path.basename(__file__).split('.')[0]
-
-# Configure loguru
-logger.add("file_{time}.log", rotation="10 MB", retention="1 month")  # Logs will be saved to files with rotation and retention of 1 month
 
 if len(sys.argv) != 2:
     logger.error("Usage: python worker.py <API_KEY_NO>")

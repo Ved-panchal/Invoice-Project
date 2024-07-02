@@ -1,27 +1,34 @@
-import pika, uuid, asyncio, threading, json
+import pika, uuid, asyncio, threading
+
+# import pika.exceptions
 from web_socket.fastapi_socket import SocketConnectionManager
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
 
+from logger import logger
+
 class RemoteProcessClient(object):
 
     def __init__(self, socket_manager: SocketConnectionManager):
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-        self.channel = self.connection.channel()
-        self.socket_manager = socket_manager
-        self.callback_queue = 'callBackQueue'
-        self.rpc1_queue = 'rpc1_queue'
-        self.channel.queue_declare(queue=self.rpc1_queue, durable=True)
-        self.channel.queue_declare(queue=self.callback_queue, durable=True)
-        self.channel.basic_consume(
-            queue=self.callback_queue,
-            on_message_callback=self.on_response,
-            auto_ack=True)
-        self.responses = {}
-        self.corr_id_name_map = {}
-        self.executor = ThreadPoolExecutor()
-        self.lock = threading.Lock()
+        try:
+            self.connection = pika.BlockingConnection(
+                pika.ConnectionParameters(host='localhost'))
+            self.channel = self.connection.channel()
+            self.socket_manager = socket_manager
+            self.callback_queue = 'callBackQueue'
+            self.rpc1_queue = 'rpc1_queue'
+            self.channel.queue_declare(queue=self.rpc1_queue, durable=True)
+            self.channel.queue_declare(queue=self.callback_queue, durable=True)
+            self.channel.basic_consume(
+                queue=self.callback_queue,
+                on_message_callback=self.on_response,
+                auto_ack=True)
+            self.responses = {}
+            self.corr_id_name_map = {}
+            self.executor = ThreadPoolExecutor()
+            self.lock = threading.Lock()
+        except Exception as e:
+            logger.error("Please start RabbitMQ.")
 
     def on_response(self, ch, method, props, body):
         print('Got response.')
