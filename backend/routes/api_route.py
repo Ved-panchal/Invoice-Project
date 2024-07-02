@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from bson import ObjectId
 
-from models import PDFDataStatus, PDFUploadStatus
+from models import PDFApprovalStatus, PDFUploadStatus
 from util import utils, pdf_utils
 from extraction import get_pdf_name
 from database import mongo_conn
@@ -31,7 +31,7 @@ async def upload_files(user_id: str, background_tasks: BackgroundTasks, document
                     "pdfId":"",
                     "pdfName": document.filename,
                     "pdfStatus": PDFUploadStatus.PENDING,
-                    "pdfApprovalStatus": PDFDataStatus.PENDING,
+                    "pdfApprovalStatus": PDFApprovalStatus.PENDING,
                     "createdAt": datetime.now(),
                 }
             }
@@ -141,7 +141,7 @@ def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager
         }
         update_operation_pdf_mapping_data = {
             '$set': {
-                'pdfData.pdfApprovalStatus': PDFDataStatus.APPROVED if pdf_approval_status == "1" else PDFDataStatus.REJECTED
+                'pdfData.pdfApprovalStatus': PDFApprovalStatus.APPROVED if pdf_approval_status == "1" else PDFApprovalStatus.REJECTED
             }
         }
         result_pdf_data = mongo_conn.get_pdf_data_collection().update_one({"_id": ObjectId(invoice_id)}, update_operation_pdf_data)

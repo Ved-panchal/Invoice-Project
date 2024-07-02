@@ -23,21 +23,21 @@ class PDFUploadStatus(str, Enum):
     COMPLETED = "Completed"
     EXCEPTION = "Exception"
 
-class UserPDFMappingData(BaseModel):
-    pdfId: str
-    pdfName: str
-    pdfStatus: PDFUploadStatus
-
-class UserPDFMappingSchema(BaseModel):
-    userId: str
-    createdAt: datetime
-    pdfData: UserPDFMappingData
-
-class PDFDataStatus(str, Enum):
+class PDFApprovalStatus(str, Enum):
     PENDING = "pending".upper()
     APPROVED = "approved".upper()
     REJECTED = "rejected".upper()
 
+class UserPDFMappingData(BaseModel):
+    pdfId: str
+    pdfName: str
+    pdfStatus: PDFUploadStatus
+    pdfApprovalStatus: PDFApprovalStatus
+    createdAt: datetime
+
+class UserPDFMappingSchema(BaseModel):
+    userId: str
+    pdfData: UserPDFMappingData
+
 class PDFData(BaseModel):
     data: List[object]
-    pdfDataStatus: PDFDataStatus
