@@ -117,6 +117,34 @@ def _process_file(client, filename: str, user_id: str) -> str:
         raise Exception(str(e))
 
 @logger.catch
+def update_pdf_status(obj_id, new_file_id, pdfUploadStatus):
+    try:
+        update_operation = {
+            '$set': {
+                'pdfData.pdfId': new_file_id,
+                'pdfData.pdfStatus': pdfUploadStatus
+            }
+        }
+
+        mongo_conn.get_user_pdf_mapping_collection().update_one({'_id': obj_id}, update_operation)
+        logger.info('New pdfId with status as Completed updated to UserPdfMapping collection.')
+    except Exception as e:
+        raise Exception("Exception from updating pdf status: " + str(e))
+
+@logger.catch
+def update_credits(user_id, total_pages):
+    try:
+        update_credits = {
+                '$set': {
+                    'totalCredits': {'$max': [0, {'$subtract': ['$totalCredits', total_pages]}]}
+                }
+            }
+
+        mongo_conn.get_users_collection().update_one({"userId": user_id}, update_credits)
+    except Exception as e:
+        raise Exception("Exception from updating credits: " + str(e))
+
+@logger.catch
 def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
     """
     Store the processed PDF data and update the database.
@@ -144,6 +172,10 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         file_ext = filename.split('.')[-1]
         file_location = STATIC_DIR / user_id / filename
 
+        # Get the total number of pages in the PDF
+        total_pages = pdf_utils.get_total_pages_pdf(file_location)
+        logger.info(f'Total pages in the PDF: {total_pages}')
+
         logger.info('Sent Pdf for processing.')
         new_file_id = _process_file(client, filename, user_id)
         logger.info('Received new pdf id after processing.')
@@ -156,28 +188,25 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         os.rename(file_location, new_file_location)
         logger.info('Pdf renamed in static folder.')
 
-        update_operation = {
-            '$set': {
-                'pdfData.pdfId': new_file_id,
-                'pdfData.pdfStatus': PDFUploadStatus.COMPLETED
-            }
-        }
-        pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
-        pdf_mapping.update_one({'_id': obj_id}, update_operation)
-        logger.info('New pdfId with status as Completed updated to UserPdfMapping collection.')
+        # Update pdf status
+        update_pdf_status(obj_id, new_file_id, PDFUploadStatus.COMPLETED)
 
-        return new_file_id
+        # Subtract total_pages from totalCredits ensuring it does not go below 0
+        update_credits(user_id, total_pages)
+
+        return new_file_id, total_pages
 
     except Exception as e:
         logger.exception("Error in _store_pdf_data")
-        update_operation = {
-            '$set': {
-                'pdfData.pdfId': '',
-                'pdfData.pdfStatus': PDFUploadStatus.EXCEPTION
-            }
-        }
-        pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
-        pdf_mapping.update_one({'_id': obj_id}, update_operation)
+        # update_operation = {
+        #     '$set': {
+        #         'pdfData.pdfId': '',
+        #         'pdfData.pdfStatus': PDFUploadStatus.EXCEPTION
+        #     }
+        # }
+        # pdf_mapping = mongo_conn.get_user_pdf_mapping_collection()
+        # pdf_mapping.update_one({'_id': obj_id}, update_operation)
+        update_pdf_status(obj_id, '', PDFUploadStatus.EXCEPTION)
         logger.info('New pdfId with status as Exception updated to UserPdfMapping collection.')
         raise Exception("Exception from store_pdf_data: " + str(e))
 

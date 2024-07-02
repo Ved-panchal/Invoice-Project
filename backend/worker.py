@@ -42,12 +42,12 @@ class PikaWorker:
             logger.debug(f'Processing task: {body}')
 
             # Process PDF here
-            response = store_pdf_data(client, props.headers['user_id'], body.decode(), STATIC_DIR)
-            logger.info(f'New file Id: {response}')
-            response_json = json.dumps({'pdfStatus': 'Completed', 'pdfId': response, 'id': body.decode().split('.')[0]})
+            new_file_id, total_pages = store_pdf_data(client, props.headers['user_id'], body.decode(), STATIC_DIR)
+            logger.info(f'New file Id: {new_file_id}')
+            response_json = json.dumps({'pdfStatus': 'Completed', 'pdfId': new_file_id, 'totalPages': total_pages, 'id': body.decode().split('.')[0]})
         except Exception as e:
             logger.exception(f'Error processing task: {e}')
-            response_json = json.dumps({'error': "Exception from worker...", 'pdfStatus': 'Exception', 'id': body.decode().split('.')[0]})
+            response_json = json.dumps({'error': "Exception from worker...", 'pdfStatus': 'Exception', 'totalPages': 0, 'id': body.decode().split('.')[0]})
 
         try:
             logger.info('Task completed')
