@@ -112,3 +112,11 @@ class Pdf_Utils:
             # Handle any errors that occur during conversion
             raise Exception(f"Error converting document: {e}")
             # return ''
+
+    def get_total_pages_pdf(pdfPath):
+        try:
+            # Get the total number of pages in the PDF
+            with pdfplumber.open(pdfPath) as pdf:
+                return len(pdf.pages)
+        except Exception as e:
+            raise Exception(f"Error getting total pages of pdf: {str(e)}")
