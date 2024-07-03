@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import showToast from "../../services/toast";
+import  showToast  from "../../services/toast"
+import Pricing from "../Pricing/Pricing";
 
 const Home = () => {
   useEffect(() => {
@@ -12,7 +13,7 @@ const Home = () => {
   return (
     <>
       <section className="Home">
-        Home Page
+        <Pricing/>
       </section>
     </>
   )

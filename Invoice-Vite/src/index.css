@@ -1,3 +1,7 @@
-/* @tailwind base;
+@tailwind base;
 @tailwind components;
-@tailwind utilities; */
+@tailwind utilities;
+
+.drawer-overlay {
+    background-color: white !important;
+  }

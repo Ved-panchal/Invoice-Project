@@ -1,11 +1,4 @@
-import {
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-  Input,
-  Button,
-} from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "../../../utils/apiUtils";
 import showToast from "../../../services/toast";
 import { useNavigate } from "react-router-dom";
@@ -46,8 +39,7 @@ const LoginForm = () => {
   
         if (response) {
           localStorage.setItem('userId', response.data['userId']);
-          // toast.success("Login successful!");
-          showToast({message:"Login Successfull!!",type:"success"})
+          showToast("Login Successfull!!","success")
           setTimeout(() => {
             navigate('/uploadinvoice');
           }, 2000);

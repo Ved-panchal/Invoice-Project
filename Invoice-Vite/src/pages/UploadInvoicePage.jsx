@@ -8,7 +8,11 @@ import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
 import api from "../utils/apiUtils";
 import showToast from "../services/toast";
 
-const allowedFileTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+const allowedFileTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 function UploadInvoicePage() {
   const [files, setFiles] = useState([]);
@@ -20,7 +24,9 @@ function UploadInvoicePage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const onDrop = useCallback((acceptedFiles) => {
-    const validFiles = acceptedFiles.filter(file => allowedFileTypes.includes(file.type));
+    const validFiles = acceptedFiles.filter((file) =>
+      allowedFileTypes.includes(file.type)
+    );
     if (validFiles.length !== acceptedFiles.length) {
       setError("Please upload only PDF or DOCX files.");
       return;
@@ -36,34 +42,43 @@ function UploadInvoicePage() {
   const uploadPdf = async () => {
     try {
       const formData = new FormData();
-      files.forEach((file) => formData.append('documents', file));
-      const userId = localStorage.getItem('userId');
-      const response = await api.post(`/uploadFiles/${userId}`, formData, { // 2 is for user id when login is created then it should be replaced
+      files.forEach((file) => formData.append("documents", file));
+      const userId = localStorage.getItem("userId");
+      const response = await api.post(`/uploadFiles/${userId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
       if (response.status === 200) {
-        response.data.uploadedFiles.forEach((item,index) => {
-          setTimeout(() => {showToast({message:`${item} uploaded`, type:'success'})},1000*index)
+        response.data.uploadedFiles.forEach((item, index) => {
+          setTimeout(() => {
+            showToast({ message: `${item} uploaded`, type: "success" });
+          }, 1000 * index);
         });
-        response.data.notUploadedFiles.forEach((item,index) => {
-          setTimeout(() => {showToast({message:`not enough credits for ${item}`, type:'error'})},(1000*index + (Math.max(uploadedFiles.length-1, 0)*1000)))
-        })
+        response.data.notUploadedFiles.forEach((item, index) => {
+          setTimeout(() => {
+            showToast({
+              message: `not enough credits for ${item}`,
+              type: "error",
+            });
+          }, 1000 * index + Math.max(uploadedFiles.length - 1, 0) * 1000);
+        });
       }
     } catch (error) {
-      console.log('error uploading', error);
+      console.log("error uploading", error);
       throw error;
     }
   };
 
-
   const fetchUploadedFiles = async () => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     try {
-      let response = await api.post(`/get_pdfs/${userId}`, { page: currentPage, count: 5 });
+      let response = await api.post(`/get_pdfs/${userId}`, {
+        page: currentPage,
+        count: 5,
+      });
       let data = response.data;
-      setUploadedFiles(data)
+      setUploadedFiles(data);
     } catch (error) {
       console.error("Error fetching uploaded files:", error);
       setError("Error fetching uploaded files. Please try again.");
@@ -71,15 +86,14 @@ function UploadInvoicePage() {
   };
 
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
 
     const socket = new WebSocket(`ws://localhost:5500/ws/${userId}`);
 
-    // Listen for messages from the WebSocket server
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      console.log("ws message",message)
-      // Update the uploadedFiles state based on the received message
+      console.log("ws message", message);
+
       setUploadedFiles((prevFiles) => {
         const index = prevFiles.findIndex((file) => file.id === message.id);
         if (index !== -1) {
@@ -100,16 +114,8 @@ function UploadInvoicePage() {
   }, []);
 
   useEffect(() => {
-    if(error != null){
-      showToast({message:error,
-        position: "top-right",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: false,
-        progress: undefined,
-      });
+    if (error != null) {
+      showToast({ message: error, type: "error" });
       setError(null);
     }
   }, [error]);
@@ -122,24 +128,30 @@ function UploadInvoicePage() {
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
-  
+
   const renderPagination = () => {
     const pages = [];
     const createPageButton = (pageNumber) => (
       <button
         key={pageNumber}
         onClick={() => handlePageChange(pageNumber)}
-        style={currentPage === pageNumber ? styles.activePageButton : styles.pageButton}
+        style={
+          currentPage === pageNumber
+            ? styles.activePageButton
+            : styles.pageButton
+        }
       >
         {pageNumber}
       </button>
     );
     const addEllipsis = (key) => (
-      <span key={key} style={styles.ellipsis}>...</span>
+      <span key={key} style={styles.ellipsis}>
+        ...
+      </span>
     );
     if (currentPage >= 4) {
       pages.push(createPageButton(1));
-      if(currentPage != 4){
+      if (currentPage != 4) {
         pages.push(addEllipsis("start-ellipsis"));
       }
     }
@@ -159,8 +171,8 @@ function UploadInvoicePage() {
       pages.push(createPageButton(totalPages));
     }
 
-    if(pages.length === 0){
-      return <h1 style={{color:"white"}}>Please Upload Pdfs!!</h1>
+    if (pages.length === 0) {
+      return <h1 style={{ color: "white" }}>Please Upload Pdfs!!</h1>;
     }
 
     return pages;
@@ -191,13 +203,17 @@ function UploadInvoicePage() {
   const handleDelete = async (fileToDelete) => {
     try {
       // Only attempt to delete from the server if the file has been successfully uploaded
-      if (fileToDelete.pdfId !== "cannot be extracted" && fileToDelete.pdfId !== "Loading..." && fileToDelete.id !== "") {
+      if (
+        fileToDelete.pdfId !== "cannot be extracted" &&
+        fileToDelete.pdfId !== "Loading..." &&
+        fileToDelete.id !== ""
+      ) {
         await api.post("/delete_pdf", { fileId: fileToDelete.id });
       }
       setUploadedFiles((prevUploadedFiles) =>
         prevUploadedFiles.filter((file) => file.id !== fileToDelete.id)
       );
-      if(uploadedFiles.length === 1){
+      if (uploadedFiles.length === 1) {
         setCurrentPage(currentPage - 1);
         return;
       }
@@ -209,15 +225,13 @@ function UploadInvoicePage() {
     }
   };
 
-
   const formatDate = (date) => {
     if (!date || !isValid(new Date(date))) return "Invalid date";
     return format(new Date(date), "MMM dd, yyyy, hh:mm a");
   };
 
-
   const fetchTotalPages = async () => {
-    const userId = localStorage.getItem('userId');
+    const userId = localStorage.getItem("userId");
     try {
       const response = await api.get(`/get_total_pages/${userId}`);
       const totalPdfCount = response.data;
@@ -228,223 +242,239 @@ function UploadInvoicePage() {
     }
   };
   // return(<><Toast/></>)
-  
+
   return (
     <>
-    {/* <Toast autoClose={50000} position="top-right"/> */}
-    <div style={styles.page}>
-      <h1 style={styles.heading}>Upload Document</h1>
-      <div style={styles.container}>
-        <form style={styles.form}>
-          <div {...getRootProps({ style: styles.dropzone })}>
-            <input {...getInputProps()} />
-            {isDragActive ? (
-              <p style={styles.whitefont}>Drop the files here ...</p>
-            ) : (
-              <p style={styles.whitefont}>
-                Drag 'n' drop PDF, DOC or DOCX files here, or click to select
-                them
-              </p>
-            )}
-          </div>
-          {files.length > 0 && (
-            <div style={styles.fileDetailsContainer}>
-              {files.map((file, index) => (
-                <div key={index} style={styles.fileDetails}>
-                  <p style={styles.fileName}>Selected File: {file.name}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFiles((prevFiles) =>
-                        prevFiles.filter((f, i) => i !== index)
-                      );
-                    }}
-                    style={styles.deleteButton}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
+      {/* <Toast autoClose={50000} position="top-right"/> */}
+      <div style={styles.page}>
+        <h1 style={styles.heading}>Upload Document</h1>
+        <div style={styles.container}>
+          <form style={styles.form}>
+            <div {...getRootProps({ style: styles.dropzone })}>
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <p style={styles.whitefont}>Drop the files here ...</p>
+              ) : (
+                <p style={styles.whitefont}>
+                  Drag 'n' drop PDF, DOC or DOCX files here, or click to select
+                  them
+                </p>
+              )}
             </div>
-          )}
-            <AnimatedButton submit={handleSubmit} isDisabled={(files.length === 0 || loading) ? true : false}/>
-        </form>
-        <div style={styles.tableContainer}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.tableHeader}>STATUS</th>
-                <th style={styles.tableHeader}>FILE NAME</th>
-                <th style={styles.tableHeader}>CREATED</th>
-                <th style={styles.tableHeader}>APPROVALS</th>
-                <th style={styles.tableHeader}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {uploadedFiles.map((file, index) => (
-                <tr key={`pdf-${index}`} style={styles.tableRow}>
-                  <td style={styles.tableCell}>
-                    {file.pdfStatus === 'Pending' && <div style={styles.pendingStatus}><span>{file.pdfStatus}  </span><Loader /></div>}
-                    {file.pdfStatus === 'Completed' && <div style={styles.completeStatus}>{file.pdfStatus}</div>}
-                    {file.pdfStatus === 'Exception' && <div style={styles.exceptionStatus}>{file.pdfStatus}</div>}
-                  </td>
-                  <td style={styles.tableCell}>{file.pdfName}</td>
-                  <td style={styles.tableCell}>{formatDate(file.createdAt)}</td>
-                  <td style={styles.tableCell}>{file.pdfApprovalStatus}</td>
-                  <td style={styles.tableCell}>
-                    <div style={styles.actions}>
-                    {/* {file.pdfStatus !== 'Pending' && ( */}
-                      <button
-                        style={styles.deleteButton}
-                        onClick={() => handleDelete(file)}
-                      >
-                        Delete
-                      </button>
-                      {/* )} */}
-                      {file.pdfStatus === 'Completed' && (
-                        <button
-                          style={styles.viewButton}
-                          onClick={() =>
-                            navigate(`/my-documents/${file.pdfId}`)
-                          }
-                        >
-                          View
-                        </button>
-                      )}
-                    </div>
-                  </td>
+            {files.length > 0 && (
+              <div style={styles.fileDetailsContainer}>
+                {files.map((file, index) => (
+                  <div key={index} style={styles.fileDetails}>
+                    <p style={styles.fileName}>Selected File: {file.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiles((prevFiles) =>
+                          prevFiles.filter((f, i) => i !== index)
+                        );
+                      }}
+                      style={styles.deleteButton}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <AnimatedButton
+              submit={handleSubmit}
+              isDisabled={files.length === 0 || loading ? true : false}
+            />
+          </form>
+          <div style={styles.tableContainer}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.tableHeader}>STATUS</th>
+                  <th style={styles.tableHeader}>FILE NAME</th>
+                  <th style={styles.tableHeader}>CREATED</th>
+                  <th style={styles.tableHeader}>APPROVALS</th>
+                  <th style={styles.tableHeader}>ACTIONS</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={styles.paginationContainer}>
-            {renderPagination()}
+              </thead>
+              <tbody>
+                {uploadedFiles.map((file, index) => (
+                  <tr key={`pdf-${index}`} style={styles.tableRow}>
+                    <td style={styles.tableCell}>
+                      {file.pdfStatus === "Pending" && (
+                        <div style={styles.pendingStatus}>
+                          <span>{file.pdfStatus} </span>
+                          <Loader />
+                        </div>
+                      )}
+                      {file.pdfStatus === "Completed" && (
+                        <div style={styles.completeStatus}>
+                          {file.pdfStatus}
+                        </div>
+                      )}
+                      {file.pdfStatus === "Exception" && (
+                        <div style={styles.exceptionStatus}>
+                          {file.pdfStatus}
+                        </div>
+                      )}
+                    </td>
+                    <td style={styles.tableCell}>{file.pdfName}</td>
+                    <td style={styles.tableCell}>
+                      {formatDate(file.createdAt)}
+                    </td>
+                    <td style={styles.tableCell}>{file.pdfApprovalStatus}</td>
+                    <td style={styles.tableCell}>
+                      <div style={styles.actions}>
+                        {/* {file.pdfStatus !== 'Pending' && ( */}
+                        <button
+                          style={styles.deleteButton}
+                          onClick={() => handleDelete(file)}
+                        >
+                          Delete
+                        </button>
+                        {/* )} */}
+                        {file.pdfStatus === "Completed" && (
+                          <button
+                            style={styles.viewButton}
+                            onClick={() =>
+                              navigate(`/my-documents/${file.pdfId}`)
+                            }
+                          >
+                            View
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={styles.paginationContainer}>{renderPagination()}</div>
           </div>
         </div>
       </div>
-    </div>
-  </>
+    </>
   );
 }
 
 const styles = {
   page: {
-    width:"100vw",
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#2c3e50',
-    padding: '20px',
-    textAlign: 'center',
-    letterSpacing:'1px',
+    width: "100vw",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    minHeight: "100vh",
+    backgroundColor: "#2c3e50",
+    padding: "20px",
+    textAlign: "center",
+    letterSpacing: "1px",
     fontFamily: "'Poppins', sans-serif",
   },
   heading: {
-    marginBottom: '20px',
-    fontSize: '36px',
-    fontWeight: 'bold',
-    color: '#ecf0f1',
+    marginBottom: "20px",
+    fontSize: "36px",
+    fontWeight: "bold",
+    color: "#ecf0f1",
     fontFamily: "'Poppins', sans-serif",
   },
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    width: '80%',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: "80%",
     fontFamily: "'Poppins', sans-serif",
   },
   form: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: '700px',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: "700px",
     fontFamily: "'Poppins', sans-serif",
   },
   dropzone: {
-    width: '100%',
-    padding: '60px',
-    borderWidth: '2px',
-    borderColor: '#7f8c8d',
-    borderStyle: 'dashed',
-    borderRadius: '5px',
-    backgroundColor: '#34495e',
-    color: '#fff',
-    textAlign: 'center',
-    cursor: 'pointer',
-    marginBottom: '20px',
+    width: "100%",
+    padding: "60px",
+    borderWidth: "2px",
+    borderColor: "#7f8c8d",
+    borderStyle: "dashed",
+    borderRadius: "5px",
+    backgroundColor: "#34495e",
+    color: "#fff",
+    textAlign: "center",
+    cursor: "pointer",
+    marginBottom: "20px",
     fontFamily: "'Poppins', sans-serif",
   },
   whitefont: {
-    color: '#ffffffaf',
-    fontWeight: '600',
+    color: "#ffffffaf",
+    fontWeight: "600",
     fontFamily: "'Poppins', sans-serif",
   },
   fileDetailsContainer: {
-    width: '100%',
-    maxHeight: '200px',
-    overflowY: 'auto',
-    marginBottom: '10px',
+    width: "100%",
+    maxHeight: "200px",
+    overflowY: "auto",
+    marginBottom: "10px",
     fontFamily: "'Poppins', sans-serif",
   },
   fileDetails: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '5px',
-    padding: '5px 10px',
-    backgroundColor: '#95a5a6',
-    borderRadius: '5px',
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "5px",
+    padding: "5px 10px",
+    backgroundColor: "#95a5a6",
+    borderRadius: "5px",
     fontFamily: "'Poppins', sans-serif",
   },
   fileName: {
-    fontSize: '14px',
-    marginRight: '10px',
-    color: '#2c3e50',
+    fontSize: "14px",
+    marginRight: "10px",
+    color: "#2c3e50",
     fontFamily: "'Poppins', sans-serif",
   },
   deleteButton: {
-    padding: '5px 10px',
-    fontSize: '14px',
-    backgroundColor: '#e74c3c',
-    color: '#ecf0f1',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
+    padding: "5px 10px",
+    fontSize: "14px",
+    backgroundColor: "#e74c3c",
+    color: "#ecf0f1",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
     fontFamily: "'Poppins', sans-serif",
   },
   button: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    backgroundColor: '#028391',
-    color: '#ecf0f1',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
+    padding: "10px 20px",
+    fontSize: "16px",
+    backgroundColor: "#028391",
+    color: "#ecf0f1",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
     fontFamily: "'Poppins', sans-serif",
   },
   error: {
-    color: '#e74c3c',
-    marginBottom: '10px',
+    color: "#e74c3c",
+    marginBottom: "10px",
     fontFamily: "'Poppins', sans-serif",
   },
   tableContainer: {
-    marginTop: '20px',
-    width: '100%',
-    overflowX: 'auto',
+    marginTop: "20px",
+    width: "100%",
+    overflowX: "auto",
     fontFamily: "'Poppins', sans-serif",
   },
   table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    backgroundColor: '#34495e',
+    width: "100%",
+    borderCollapse: "collapse",
+    backgroundColor: "#34495e",
     fontFamily: "'Poppins', sans-serif",
   },
   tableHeader: {
-    padding: '15px',
+    padding: "15px",
     // backgroundColor: '#028391',
-    color: '#ecf0f1',
+    color: "#ecf0f1",
     fontFamily: "'Poppins', sans-serif",
     // border: '1px solid #16a085',
   },
@@ -453,84 +483,83 @@ const styles = {
     fontFamily: "'Poppins', sans-serif",
   },
   tableCell: {
-    padding: '15px',
-    textAlign: 'center',
-    color: '#ecf0f1',
+    padding: "15px",
+    textAlign: "center",
+    color: "#ecf0f1",
     fontFamily: "'Poppins', sans-serif",
     // border: '1px solid #16a085',
   },
   completeStatus: {
-    width:'100%',
-    padding: '5px 10px',
-    color: '#004208',
-    borderRadius: '5px',
-    fontWeight: '600',
+    width: "100%",
+    padding: "5px 10px",
+    color: "#004208",
+    borderRadius: "5px",
+    fontWeight: "600",
     fontFamily: "'Poppins', sans-serif",
-    backgroundColor: "#03C988"
+    backgroundColor: "#03C988",
   },
   pendingStatus: {
-    width:'100%',
-    padding: '5px 10px',
-    color: '#004208',
-    borderRadius: '5px',
-    fontWeight: '600',
+    width: "100%",
+    padding: "5px 10px",
+    color: "#004208",
+    borderRadius: "5px",
+    fontWeight: "600",
     fontFamily: "'Poppins', sans-serif",
-    backgroundColor: '#FFC700'
+    backgroundColor: "#FFC700",
   },
   exceptionStatus: {
-    width:'100%',
-    padding: '5px 10px',
-    color: '#4E150C',
-    borderRadius: '5px',
-    fontWeight: '600',
+    width: "100%",
+    padding: "5px 10px",
+    color: "#4E150C",
+    borderRadius: "5px",
+    fontWeight: "600",
     fontFamily: "'Poppins', sans-serif",
-    backgroundColor: '#F05941'
+    backgroundColor: "#F05941",
   },
   actions: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '10px',
+    display: "flex",
+    justifyContent: "center",
+    gap: "10px",
     fontFamily: "'Poppins', sans-serif",
   },
   viewButton: {
-    padding: '5px 10px',
-    fontSize: '14px',
-    backgroundColor: '#27ae60',
-    color: '#ecf0f1',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
+    padding: "5px 10px",
+    fontSize: "14px",
+    backgroundColor: "#27ae60",
+    color: "#ecf0f1",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
     fontFamily: "'Poppins', sans-serif",
   },
   paginationContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    margin: '20px 0 15px 0',
+    display: "flex",
+    justifyContent: "center",
+    margin: "20px 0 15px 0",
   },
   pageButton: {
-    padding: '5px 10px',
-    margin: '0 5px',
-    cursor: 'pointer',
-    backgroundColor: '#34495e',
-    color: '#ecf0f1',
-    border: 'none',
-    borderRadius: '5px',
+    padding: "5px 10px",
+    margin: "0 5px",
+    cursor: "pointer",
+    backgroundColor: "#34495e",
+    color: "#ecf0f1",
+    border: "none",
+    borderRadius: "5px",
   },
   activePageButton: {
-    padding: '5px 10px',
-    margin: '0 5px',
-    cursor: 'pointer',
-    backgroundColor: '#ecf0f1',
-    color: '#34495e',
-    border: 'none',
-    borderRadius: '5px',
+    padding: "5px 10px",
+    margin: "0 5px",
+    cursor: "pointer",
+    backgroundColor: "#ecf0f1",
+    color: "#34495e",
+    border: "none",
+    borderRadius: "5px",
   },
   ellipsis: {
-    padding: '5px 10px',
-    margin: '0 5px',
-    color: '#ecf0f1',
+    padding: "5px 10px",
+    margin: "0 5px",
+    color: "#ecf0f1",
   },
-
 };
 
 export default UploadInvoicePage;
