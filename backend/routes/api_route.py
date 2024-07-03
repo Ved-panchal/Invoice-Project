@@ -18,7 +18,7 @@ api_router = APIRouter()
 
 @api_router.post("/uploadFiles/{user_id}")
 async def upload_files(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
-    filenames = []
+    filenames, uploaded_arr, not_uploaded_arr = [], [], []
     try:
         user_id = user['userId']
         user_dir = STATIC_DIR / user_id
@@ -31,12 +31,9 @@ async def upload_files(user_id: str, response: Response, background_tasks: Backg
         print(f"total credits: {total_credits}")
 
         for document in documents:
-            if document.file.readable():
-                print("readable file")
-            else:
-                print("not readable")
-
-            buf = BytesIO(document.file.read())
+            
+            file_data = document.file.read()
+            buf = BytesIO(file_data)
 
             # get total pages for current document
             total_pages = pdf_utils.get_total_pages_pdf(buf)
@@ -67,23 +64,27 @@ async def upload_files(user_id: str, response: Response, background_tasks: Backg
                 file_location = user_dir / new_file_name
 
                 with open(file_location, "wb") as f:
-                    f.write(document.file.read())
+                    f.write(file_data)
 
-                response.body = {"uploadedFiles": document.filename}
+                uploaded_arr.append(document.filename)
 
             else:
-                response.body = {"notUploadedFiles": document.filename}
-                continue
+                not_uploaded_arr.append(document.filename)
 
         response.status_code = 200
+        response.body = json.dumps({"uploadedFiles": uploaded_arr, "notUploadedFiles": not_uploaded_arr}).encode()
+
         # Schedule the upload_files_to_queue task as a background task
         background_tasks.add_task(utils.upload_files_to_queue, queue_manager, filenames, user_id)
         # upload_files_to_queue(filenames, user_id)
+
+        return response
 
     except Exception as e:
         print("Error uploading files:", e)
         response.status_code = 500
         response.body = {"success": False, "error": str(e)}
+        return response
     # return {"success": True, "result": response}
 
 @api_router.post('/delete_pdf')

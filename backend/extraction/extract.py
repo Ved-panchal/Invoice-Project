@@ -178,10 +178,6 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         file_ext = filename.split('.')[-1]
         file_location = STATIC_DIR / user_id / filename
 
-        print(f"file location: {file_location}")
-        print(f"file location str: {str(file_location)}")
-        print(f"file location str type: {type(str(file_location))}")
-
         # Get the total number of pages in the PDF
         total_pages = pdf_utils.get_total_pages_pdf(file_location)
         logger.info(f'Total pages in the PDF: {total_pages}')

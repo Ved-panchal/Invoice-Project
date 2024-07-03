@@ -1,5 +1,6 @@
 import pdfplumber, re, os
 from docx2pdf import convert
+from zipfile import ZipFile
 
 class Pdf_Utils:
     def get_pdf_data_from_pdfplumber(self, pdf_path):
@@ -128,3 +129,9 @@ class Pdf_Utils:
                 return len(pdf.pages)
         except Exception as e:
             raise Exception(f"Error getting total pages of pdf: {str(e)}")
+        
+    def getDocxPageCount(docx_fpath):
+        docx_object = ZipFile(docx_fpath)
+        docx_property_file_data = docx_object.read('docProps/app.xml').decode()
+        page_count = re.search(r"<Pages>(\d+)</Pages>", docx_property_file_data).group(1)
+        return int(page_count)
