@@ -41,38 +41,41 @@ class Pdf_Utils:
         Returns:
         - list: A list of dictionaries containing the extracted data with coordinates for each page.
         """
-        all_pages_data = [gpt_json_data]
-        not_include_keys = ['DiscountPercent', 'Quantity', 'TaxCode', 'UnitPrice']
-        with pdfplumber.open(pdf_path) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                text_with_cords = {}
-                for key, value in gpt_json_data.items():
-                    if key in not_include_keys:
-                        continue
-                    if isinstance(value, list):
-                        text_with_cords[key] = []
-                        for item in value:
-                            for k, v in item.items():
-                                data = page.search(
-                                    v,
-                                    regex=False,
-                                    case=True,
-                                    return_chars=False,
-                                    return_groups=False
-                                )
-                                text_with_cords[key].append({"value": v, "cords": data})
-                                break
-                    else:
-                        data = page.search(
-                            value,
-                            regex=False,
-                            case=True,
-                            return_chars=False,
-                            return_groups=False
-                        )
-                        text_with_cords[key] = {"value": value, "cords": data}
-                all_pages_data.append(text_with_cords)
-        return all_pages_data
+        try:
+            all_pages_data = [gpt_json_data]
+            not_include_keys = ['DiscountPercent', 'Quantity', 'TaxCode', 'UnitPrice']
+            with pdfplumber.open(pdf_path) as pdf:
+                for idx, page in enumerate(pdf.pages):
+                    text_with_cords = {}
+                    for key, value in gpt_json_data.items():
+                        if key in not_include_keys:
+                            continue
+                        if isinstance(value, list):
+                            text_with_cords[key] = []
+                            for item in value:
+                                for k, v in item.items():
+                                    data = page.search(
+                                        v,
+                                        regex=False,
+                                        case=True,
+                                        return_chars=False,
+                                        return_groups=False
+                                    )
+                                    text_with_cords[key].append({"value": v, "cords": data})
+                                    break
+                        else:
+                            data = page.search(
+                                value,
+                                regex=False,
+                                case=True,
+                                return_chars=False,
+                                return_groups=False
+                            )
+                            text_with_cords[key] = {"value": value, "cords": data}
+                    all_pages_data.append(text_with_cords)
+            return all_pages_data
+        except Exception as e:
+            raise Exception(f"Error getting cords of word: {str(e)}")
 
     def remove_comments_from_json(self, json_string: str):
         try:
@@ -113,8 +116,13 @@ class Pdf_Utils:
             raise Exception(f"Error converting document: {e}")
             # return ''
 
-    def get_total_pages_pdf(pdfPath):
+    def get_total_pages_pdf(self, pdfPath):
         try:
+            print("In pdfplumber")
+            if type(pdfPath) == str:
+                print(f'pdf path: {pdfPath}')
+            else:
+                print(f'pdfPath: file is in bytes.\nfile type: {type(pdfPath)}')
             # Get the total number of pages in the PDF
             with pdfplumber.open(pdfPath) as pdf:
                 return len(pdf.pages)

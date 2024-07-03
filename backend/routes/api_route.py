@@ -5,6 +5,7 @@ import os, json
 from datetime import datetime
 from pathlib import Path
 from bson import ObjectId
+from io import BytesIO
 
 from models import PDFApprovalStatus, PDFUploadStatus
 from util import utils, pdf_utils
@@ -16,46 +17,74 @@ from routes import login_manager, STATIC_DIR
 api_router = APIRouter()
 
 @api_router.post("/uploadFiles/{user_id}")
-async def upload_files(user_id: str, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
-    response, filenames = [], []
+async def upload_files(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
+    filenames = []
     try:
         user_id = user['userId']
         user_dir = STATIC_DIR / user_id
         if not user_dir.exists():
             os.makedirs(user_dir)
 
+        # Get total credits from db
+        credits = mongo_conn.get_users_collection().find_one({"userId": user_id}, {"totalCredits": 1, "_id": 0})
+        total_credits = credits['totalCredits']
+        print(f"total credits: {total_credits}")
+
         for document in documents:
-            pdf_data = {
-                "userId": user_id,
-                "pdfData": {
-                    "pdfId":"",
-                    "pdfName": document.filename,
-                    "pdfStatus": PDFUploadStatus.PENDING,
-                    "pdfApprovalStatus": PDFApprovalStatus.PENDING,
-                    "createdAt": datetime.now(),
+            if document.file.readable():
+                print("readable file")
+            else:
+                print("not readable")
+
+            buf = BytesIO(document.file.read())
+
+            # get total pages for current document
+            total_pages = pdf_utils.get_total_pages_pdf(buf)
+            print(f"total pages: {total_pages}")
+
+            # check if total pages < total credits if yes then allow else continue and subtract total credits by total pages
+            if total_pages <= total_credits:
+                total_credits -= total_pages
+
+                pdf_data = {
+                    "userId": user_id,
+                    "pdfData": {
+                        "pdfId":"",
+                        "pdfName": document.filename,
+                        "pdfStatus": PDFUploadStatus.PENDING,
+                        "pdfApprovalStatus": PDFApprovalStatus.PENDING,
+                        "createdAt": datetime.now(),
+                    }
                 }
-            }
-            # print(pdf_data)
-            result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
-            pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
-            pdf_data['pdfData']['id'] = pdf_data['_id']
-            response.append(pdf_data['pdfData'])
-            file_ext = document.filename.split('.')[-1].lower()
-            new_file_name = f'{pdf_data["_id"]}.{file_ext}'
-            filenames.append(new_file_name)
-            file_location = user_dir / new_file_name
+                # print(pdf_data)
+                result = mongo_conn.get_user_pdf_mapping_collection().insert_one(pdf_data)
+                pdf_data['_id'] = str(result.inserted_id) if result is not None else ""
+                pdf_data['pdfData']['id'] = pdf_data['_id']
+                # response.append(pdf_data['pdfData'])
+                file_ext = document.filename.split('.')[-1].lower()
+                new_file_name = f'{pdf_data["_id"]}.{file_ext}'
+                filenames.append(new_file_name)
+                file_location = user_dir / new_file_name
 
-            with open(file_location, "wb") as f:
-                f.write(document.file.read())
+                with open(file_location, "wb") as f:
+                    f.write(document.file.read())
 
+                response.body = {"uploadedFiles": document.filename}
+
+            else:
+                response.body = {"notUploadedFiles": document.filename}
+                continue
+
+        response.status_code = 200
         # Schedule the upload_files_to_queue task as a background task
         background_tasks.add_task(utils.upload_files_to_queue, queue_manager, filenames, user_id)
         # upload_files_to_queue(filenames, user_id)
 
     except Exception as e:
         print("Error uploading files:", e)
-        return {"success": False, "error": str(e)}
-    return {"success": True, "result": response}
+        response.status_code = 500
+        response.body = {"success": False, "error": str(e)}
+    # return {"success": True, "result": response}
 
 @api_router.post('/delete_pdf')
 async def delete_file(payload: dict, response: Response, user=Depends(login_manager)):

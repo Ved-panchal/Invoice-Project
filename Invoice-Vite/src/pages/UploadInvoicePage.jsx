@@ -42,7 +42,7 @@ function UploadInvoicePage() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return response.data.result;
+      return response.data;
     } catch (error) {
       console.log('error uploading', error);
       throw error;

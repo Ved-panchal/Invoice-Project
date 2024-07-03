@@ -66,10 +66,13 @@ def _get_invoice_data_text(client, pdf_path: TextData, user_id: str) -> list:
         pdf_data = pdf_utils.get_pdf_data_from_pdfplumber(pdf_path)
         logger.info('Received data from PdfPlumber.')
         result = _get_data_from_gpt(client, pdf_data, user_id)
+        print(f'result: {result}')
         logger.info('Received response from Qwen.')
         if result:
             extracted_text = pdf_utils.remove_comments_from_json(result)
             json_data = json.loads(extracted_text)
+            print(f'json_data: {json_data}')
+
             res_list = pdf_utils.get_cords_of_word(json_data, pdf_path)
             # res_list.insert(0, json_data)
             return res_list
@@ -135,14 +138,17 @@ def update_pdf_status(obj_id, new_file_id, pdfUploadStatus):
 def update_credits(user_id, total_pages):
     try:
         update_credits = {
-                '$set': {
-                    'totalCredits': {'$max': [0, {'$subtract': ['$totalCredits', total_pages]}]}
-                }
+            '$inc': {
+                'totalCredits': -total_pages
             }
+        }
 
         mongo_conn.get_users_collection().update_one({"userId": user_id}, update_credits)
     except Exception as e:
         raise Exception("Exception from updating credits: " + str(e))
+
+
+############### check pdf path, json error -> check data ######################
 
 @logger.catch
 def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
@@ -172,6 +178,10 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         file_ext = filename.split('.')[-1]
         file_location = STATIC_DIR / user_id / filename
 
+        print(f"file location: {file_location}")
+        print(f"file location str: {str(file_location)}")
+        print(f"file location str type: {type(str(file_location))}")
+
         # Get the total number of pages in the PDF
         total_pages = pdf_utils.get_total_pages_pdf(file_location)
         logger.info(f'Total pages in the PDF: {total_pages}')
@@ -194,8 +204,7 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         # Subtract total_pages from totalCredits ensuring it does not go below 0
         update_credits(user_id, total_pages)
 
-        return new_file_id, total_pages
-
+        return [new_file_id, total_pages]
     except Exception as e:
         logger.exception("Error in _store_pdf_data")
         # update_operation = {
@@ -225,7 +234,10 @@ def _get_pdf_name(user_id: str, invoice_id: str) -> str:
     Raises:
     - HTTPException: If the PDF is not found.
     """
-    pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"pdfData.pdfId": invoice_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
-    if pdf:
-        return pdf['pdfData']['pdfName']
-    raise HTTPException(status_code=404, detail="PDF not found")
+    try:
+        pdf = mongo_conn.get_user_pdf_mapping_collection().find_one({"pdfData.pdfId": invoice_id, "userId": user_id}, {"pdfData.pdfName": 1, "_id": 0})
+        if pdf:
+            return pdf['pdfData']['pdfName']
+        raise HTTPException(status_code=404, detail="PDF not found")
+    except Exception as e:
+        raise Exception(f"Error getting name of pdf: {str(e)}")
