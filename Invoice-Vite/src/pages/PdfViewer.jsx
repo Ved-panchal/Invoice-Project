@@ -18,7 +18,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const scale_val = 1.9;
 
   const handleBack = () => {
-    navigate('/Uploadinvoice')
+    navigate('/profile/uploadinvoice')
   };
 
   
