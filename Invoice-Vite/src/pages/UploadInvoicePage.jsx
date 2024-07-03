@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
 import api from "../utils/apiUtils";
 
-const allowedFileTypes = ["application/pdf", "image/jpeg", "image/png"];
+const allowedFileTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
 function UploadInvoicePage() {
   const [files, setFiles] = useState([]);
@@ -42,6 +42,7 @@ function UploadInvoicePage() {
           'Content-Type': 'multipart/form-data',
         },
       });
+      console.log(response);
       return response.data;
     } catch (error) {
       console.log('error uploading', error);

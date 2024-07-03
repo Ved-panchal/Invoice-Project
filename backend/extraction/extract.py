@@ -173,7 +173,7 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
 
         file_ext = filename.split('.')[-1].lower()
         if file_ext in ['doc', 'docx']:
-            filename = pdf_utils.convert_doc(filename)
+            filename = pdf_utils.convert_doc(filename, STATIC_DIR / user_id)
 
         file_ext = filename.split('.')[-1]
         file_location = STATIC_DIR / user_id / filename
