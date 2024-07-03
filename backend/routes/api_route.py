@@ -38,7 +38,7 @@ async def upload_files(user_id: str, response: Response, background_tasks: Backg
 
             if file_ext == 'pdf':
                 total_pages = pdf_utils.get_total_pages_pdf(buf)
-            elif file_ext == 'doc' or file_ext == 'docx':
+            elif file_ext == 'docx':
                 total_pages = pdf_utils.get_docx_page_count(buf)
             else:
                 total_pages = 0
