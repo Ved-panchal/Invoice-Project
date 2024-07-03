@@ -7,10 +7,13 @@ import Header from './Components/Header/Header';
 import Home from './pages/Home';  
 import './App.css';
 import CustomPrompt from './pages/CustomPrompt';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   return (
     <Router>
+      <ToastContainer/>
       <div className="app-container">
         <ConditionalSidebar />
         <div className="main-content">

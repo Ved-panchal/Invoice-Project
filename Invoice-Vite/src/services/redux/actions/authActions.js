@@ -1,7 +1,7 @@
 // src/services/redux/actions/authActions.js
 import { loginSuccess, loginFailure } from '../reducers/authReducers'
 import config from '../../config';
-import { showToast } from '../../toasts/index'
+import showToast from '../../toast'
 
 export const loginUser = (credentials) => async (dispatch) => {
     try {
@@ -24,7 +24,7 @@ export const loginUser = (credentials) => async (dispatch) => {
         document.cookie = `authToken=${authToken}; path=/`;
 
         dispatch(loginSuccess(data.userInfo));
-        showToast(data.msg, 'success');
+        showToast({message:data.msg, type:'success'});
     } catch (error) {
         console.error('Fetch Error:', error);
         dispatch(loginFailure('Login failed. Please try again.'));

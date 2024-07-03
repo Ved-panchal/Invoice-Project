@@ -6,6 +6,7 @@ import "../CSS/UploadInvocie.css";
 import { useNavigate } from "react-router-dom";
 import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
 import api from "../utils/apiUtils";
+import showToast from "../services/toast";
 
 const allowedFileTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
@@ -21,7 +22,7 @@ function UploadInvoicePage() {
   const onDrop = useCallback((acceptedFiles) => {
     const validFiles = acceptedFiles.filter(file => allowedFileTypes.includes(file.type));
     if (validFiles.length !== acceptedFiles.length) {
-      setError("Please upload only PDF, JPEG, or PNG files.");
+      setError("Please upload only PDF or DOCX files.");
       return;
     }
     setFiles((prevFiles) => [...prevFiles, ...validFiles]);
@@ -42,8 +43,14 @@ function UploadInvoicePage() {
           'Content-Type': 'multipart/form-data',
         },
       });
-      console.log(response);
-      return response.data;
+      if (response.status === 200) {
+        response.data.uploadedFiles.forEach((item,index) => {
+          setTimeout(() => {showToast({message:`${item} uploaded`, type:'success'})},1000*index)
+        });
+        response.data.notUploadedFiles.forEach((item,index) => {
+          setTimeout(() => {showToast({message:`not enough credits for ${item}`, type:'error'})},(1000*index + (Math.max(uploadedFiles.length-1, 0)*1000)))
+        })
+      }
     } catch (error) {
       console.log('error uploading', error);
       throw error;
@@ -91,6 +98,21 @@ function UploadInvoicePage() {
       socket.close();
     };
   }, []);
+
+  useEffect(() => {
+    if(error != null){
+      showToast({message:error,
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: false,
+        progress: undefined,
+      });
+      setError(null);
+    }
+  }, [error]);
 
   useEffect(() => {
     fetchTotalPages();
@@ -149,7 +171,7 @@ function UploadInvoicePage() {
       setError(null);
       try {
         setLoading(true);
-        let newFiles =  await uploadPdf();
+        await uploadPdf();
         setLoading(false);
         // setUploadedFiles((prevFiles) => [...newFiles, ...prevFiles]);
         fetchTotalPages();
@@ -205,8 +227,11 @@ function UploadInvoicePage() {
       setError("Error fetching total pages. Please try again.");
     }
   };
+  // return(<><Toast/></>)
   
   return (
+    <>
+    {/* <Toast autoClose={50000} position="top-right"/> */}
     <div style={styles.page}>
       <h1 style={styles.heading}>Upload Document</h1>
       <div style={styles.container}>
@@ -242,7 +267,6 @@ function UploadInvoicePage() {
               ))}
             </div>
           )}
-          {error && <p style={styles.error}>{error}</p>}
             <AnimatedButton submit={handleSubmit} isDisabled={(files.length === 0 || loading) ? true : false}/>
         </form>
         <div style={styles.tableContainer}>
@@ -299,6 +323,7 @@ function UploadInvoicePage() {
         </div>
       </div>
     </div>
+  </>
   );
 }
 

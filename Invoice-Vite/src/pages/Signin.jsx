@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import api from '../utils/apiUtils';
 
 const Signin = () => {
@@ -64,7 +64,6 @@ const Signin = () => {
 
   return (
     <>
-      <Toaster />
       <div style={styles.signinContainer}>
         <div style={styles.signinCard}>
           <h2 style={styles.signinTitle}>Sign In</h2>
