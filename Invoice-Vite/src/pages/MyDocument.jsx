@@ -18,7 +18,7 @@ const MyDocument = () => {
     }
     return (
         <div>
-            {fileName && <PdfViewer pdfUrl={`http://${config.apiurl}/static/${userId}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
+            {fileName && <PdfViewer pdfUrl={`${config.apiurl}/static/${userId}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
         </div>
     );
 };
