@@ -31,7 +31,7 @@ app.include_router(router=admin_router)
 # Allow cross origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://85.13.195.92:5173"],
+    allow_origins=["http://localhost:5173", "http://85.13.195.92:5173", "http://192.168.10.205:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
