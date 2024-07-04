@@ -222,6 +222,7 @@
 import React, { useEffect, useState } from 'react';
 import api from "../../utils/apiUtils";
 import '../../CSS/InvoiceForm.css';
+import showToast from '../../services/toast';
 
 const InvoiceForm = ({ invoiceData, scale, fileName}) => {
   const [invoice, setInvoice] = useState(invoiceData[0]);
@@ -319,11 +320,13 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
 
 
   const handleSubmit = async (pdfStatus) => {
-    console.log("in handle submit")
     try {
-      // Send the rejection status to the server
       let response = await api.post('/set_pdf_status', { invoiceId:fileName, updatedData:invoice, pdfApprovalStatus:pdfStatus});
-      console.log("response", response)
+      if(pdfStatus){
+        showToast({message:"Pdf has been approved",type:"success"})
+      } else {
+        showToast({message:"Pdf has been rejected",type:"error"})
+      }
     } catch (error) {
       console.error('Error rejecting invoice', error);
     }

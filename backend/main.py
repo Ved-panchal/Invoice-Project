@@ -29,7 +29,7 @@ app.include_router(router=api_router)
 # Allow cross origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://85.13.195.92:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
