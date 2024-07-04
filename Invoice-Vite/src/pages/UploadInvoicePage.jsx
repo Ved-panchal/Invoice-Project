@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import AnimatedButton from "../Components/AnimatedBtn/AnimatedButton";
 import api from "../utils/apiUtils";
 import showToast from "../services/toast";
-import { apiurl } from "../utils/config";
+import config from "../utils/config";
 
 const allowedFileTypes = [
   "application/pdf",
@@ -89,7 +89,7 @@ function UploadInvoicePage() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
 
-    const socket = new WebSocket(`ws://${apiurl}/ws/${userId}`);
+    const socket = new WebSocket(`ws://${config.socketurl}/ws/${userId}`);
 
     socket.onmessage = (event) => {
       const message = JSON.parse(event.data);

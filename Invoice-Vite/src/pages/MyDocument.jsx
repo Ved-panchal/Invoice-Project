@@ -1,4 +1,4 @@
-import { apiurl } from '../utils/config';
+import config from '../utils/config';
 import PdfViewer from './PdfViewer'; // Importing PdfViewer component
 import { useParams } from 'react-router-dom';
 
@@ -18,7 +18,7 @@ const MyDocument = () => {
     }
     return (
         <div>
-            {fileName && <PdfViewer pdfUrl={`http://${apiurl}/static/${userId}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
+            {fileName && <PdfViewer pdfUrl={`http://${config.apiurl}/static/${userId}/${fileCode}.${extension}`} fileName={fileName} fileCode={fileCode}/>}
         </div>
     );
 };
