@@ -2,7 +2,7 @@
 :: Exit immediately if a command exits with a non-zero status
 setlocal enabledelayedexpansion
 
-start cmd /k "cd .. && cd Invoice-Vite && npm run dev"
+start cmd /k "cd .. && cd Invoice-Vite && npm run serve"
 
 :: Navigate to backend folder and Start Fastapi
 start cmd /k "call ..\.env-invoice\Scripts\activate && cd ..\backend && uvicorn main:app --port 5500"
