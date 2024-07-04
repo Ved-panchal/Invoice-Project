@@ -8,6 +8,7 @@ from routes.test_route import test_router
 from routes.scoket_route import socket_router
 from routes.login_route import login_router
 from routes.api_route import api_router
+from routes.admin_route import admin_router
 
 from logger import logger
 
@@ -25,11 +26,12 @@ app.include_router(router=test_router)
 app.include_router(router=socket_router)
 app.include_router(router=login_router)
 app.include_router(router=api_router)
+app.include_router(router=admin_router)
 
 # Allow cross origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://85.13.195.92:5173", "http://192.168.10.205:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

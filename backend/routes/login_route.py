@@ -37,7 +37,7 @@ def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
 
         access_token_expires = timedelta(minutes=float(ACCESS_TOKEN_EXPIRE_MINUTES))
         access_token = login_manager.create_access_token(
-            data=dict(sub=username),
+            data=dict(sub=username, roles=user['role']),
             expires=access_token_expires
         )
         login_manager.set_cookie(response, access_token)
