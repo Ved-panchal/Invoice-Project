@@ -78,12 +78,12 @@ body, h1, h2, h3, h4, h5, h6, p, div, span, input, label {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #34495e;
+    background: #5c7885;
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgb(51, 66, 82);
+    background: #465f6b;
 }
 
 /* Invoice Form Styles */

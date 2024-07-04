@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from pika.exceptions import AMQPConnectionError
 import ssl
 
 from routes.test_route import test_router
 from routes.scoket_route import socket_router
 from routes.login_route import login_router
 from routes.api_route import api_router
+
+from logger import logger
 
 # Create fastapi object
 app = FastAPI()
@@ -33,5 +36,9 @@ app.add_middleware(
 )
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5500)
+    try:
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=5500)
+    except KeyboardInterrupt:
+        logger.error("Shut down server by keyboard.")
+        print("keyboard interrupted.")

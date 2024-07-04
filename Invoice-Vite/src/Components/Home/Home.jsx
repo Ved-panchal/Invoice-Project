@@ -1,19 +1,19 @@
 import { useEffect } from "react";
-import Toast, { showToast } from "../../services/toasts"
+import  showToast  from "../../services/toast"
+import Pricing from "../Pricing/Pricing";
 
 const Home = () => {
   useEffect(() => {
     const isRedirected = localStorage.getItem('Failed');
     if (isRedirected) {
-      showToast("Not authorized without signing in.","error"),
+      showToast({message:"Not authorized without signing in.",type:"error",position:"top-center"}),
       localStorage.removeItem('Failed');
     }
   }, []);
   return (
     <>
       <section className="Home">
-        Home Page
-        <Toast/>
+        <Pricing/>
       </section>
     </>
   )

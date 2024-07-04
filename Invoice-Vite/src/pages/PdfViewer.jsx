@@ -18,28 +18,10 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
   const scale_val = 1.9;
 
   const handleBack = () => {
-    navigate('/Uploadinvoice')
+    navigate('/profile/uploadinvoice')
   };
 
-  const handleApprove = async () => {
-    try {
-      // Send the approval status to the server
-      await api.post('/invoice/approve', { fileName });
-      alert('Invoice approved');
-    } catch (error) {
-      console.error('Error approving invoice', error);
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      // Send the rejection status to the server
-      await api.post('/invoice/reject', { fileName });
-      alert('Invoice rejected');
-    } catch (error) {
-      console.error('Error rejecting invoice', error);
-    }
-  };
+  
 
   useEffect(() => {
     const getData = async () => {
@@ -48,6 +30,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       }
       try {
         const response = await api.post(`/invoice/get_data/${fileName}`);
+        console.log("data", response.data)
         setData(response.data['data']);
         setPdfName(response.data['pdfName'])
       } catch (error) {
@@ -62,7 +45,6 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     if (!imgCondition) {
       const loadingTask = pdfjsLib.getDocument(pdfUrl);
       loadingTask.promise.then((pdf) => {
-
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
           pdf.getPage(pageNumber).then((page) => {
             const viewport = page.getViewport({ scale: scale_val });
@@ -90,14 +72,12 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       <div className="pdf-navbar">
         <button onClick={handleBack}>Back</button>
         <h3>{pdfName}</h3>
+        {console.log("fileCode", fileCode)}
+        {console.log("fileName", fileName)}
       </div>
       <div className="container-pdfview">
         <div className="pdf-content">
-          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val}/> : <div className="loader">Loading...</div>}
-          <div className="action-buttons">
-            <button className="approve-btn" onClick={handleApprove}>Approve</button>
-            <button className="reject-btn" onClick={handleReject}>Reject</button>
-          </div>
+          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val} fileName={fileName}/> : <div className="loader">Loading...</div>}
         </div>
         {imgCondition ? (
           <div className="pdf-view">

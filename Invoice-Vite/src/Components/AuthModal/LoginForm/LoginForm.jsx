@@ -1,13 +1,6 @@
-import {
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-  Input,
-  Button,
-} from "@chakra-ui/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "../../../utils/apiUtils";
-import { showToast } from "../../../services/toasts";
+import showToast from "../../../services/toast";
 import { useNavigate } from "react-router-dom";
 
 const LoginForm = () => {
@@ -46,16 +39,15 @@ const LoginForm = () => {
   
         if (response) {
           localStorage.setItem('userId', response.data['userId']);
-          // toast.success("Login successful!");
           showToast("Login Successfull!!","success")
           setTimeout(() => {
             navigate('/uploadinvoice');
           }, 2000);
         } else {
-          showToast("Login failed. Please check your credentials.","error")
+          showToast({message:"Login failed. Please check your credentials.",type:"error"})
         }
       } catch (error) {
-        showToast("Login failed. Please check your credentials.","error")
+        showToast({message:"Login failed. Please check your credentials.",type:"error"})
 
       }
     }

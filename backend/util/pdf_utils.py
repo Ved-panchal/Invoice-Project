@@ -1,5 +1,6 @@
 import pdfplumber, re, os
 from docx2pdf import convert
+from zipfile import ZipFile
 
 class Pdf_Utils:
     def get_pdf_data_from_pdfplumber(self, pdf_path):
@@ -41,41 +42,51 @@ class Pdf_Utils:
         Returns:
         - list: A list of dictionaries containing the extracted data with coordinates for each page.
         """
-        all_pages_data = []
-        not_include_keys = ['DiscountPercent', 'Quantity', 'TaxCode', 'UnitPrice']
-        with pdfplumber.open(pdf_path) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                text_with_cords = {}
-                for key, value in gpt_json_data.items():
-                    if key in not_include_keys:
-                        continue
-                    if isinstance(value, list):
-                        text_with_cords[key] = []
-                        for item in value:
-                            for k, v in item.items():
-                                data = page.search(
-                                    v,
-                                    regex=False,
-                                    case=True,
-                                    return_chars=False,
-                                    return_groups=False
-                                )
-                                text_with_cords[key].append({"value": v, "cords": data})
-                                break
-                    else:
-                        data = page.search(
-                            value,
-                            regex=False,
-                            case=True,
-                            return_chars=False,
-                            return_groups=False
-                        )
-                        text_with_cords[key] = {"value": value, "cords": data}
-                all_pages_data.append(text_with_cords)
-        return all_pages_data
+        try:
+            all_pages_data = [gpt_json_data]
+            not_include_keys = ['DiscountPercent', 'Quantity', 'TaxCode', 'UnitPrice']
+            with pdfplumber.open(pdf_path) as pdf:
+                for idx, page in enumerate(pdf.pages):
+                    text_with_cords = {}
+                    for key, value in gpt_json_data.items():
+                        if key in not_include_keys:
+                            continue
+                        if isinstance(value, list):
+                            text_with_cords[key] = []
+                            for item in value:
+                                for k, v in item.items():
+                                    data = page.search(
+                                        v,
+                                        regex=False,
+                                        case=True,
+                                        return_chars=False,
+                                        return_groups=False
+                                    )
+                                    text_with_cords[key].append({"value": v, "cords": data})
+                                    break
+                        else:
+                            data = page.search(
+                                value,
+                                regex=False,
+                                case=True,
+                                return_chars=False,
+                                return_groups=False
+                            )
+                            text_with_cords[key] = {"value": value, "cords": data}
+                    all_pages_data.append(text_with_cords)
+            return all_pages_data
+        except Exception as e:
+            raise Exception(f"Error getting cords of word: {str(e)}")
 
     def remove_comments_from_json(self, json_string: str):
+        """
+        Remove comments from a JSON string. Comments are assumed to start with '//' and extend to the end of the line.
+
+        :param json_string: A string containing JSON data with potential comments.
+        :return: A JSON string with comments removed.
+        """
         try:
+            # Find the indices of the first '{' and the last '}' to isolate the JSON object
             start_index = json_string.find('{')
             end_index = json_string.rfind('}')
             json_string = json_string[start_index:end_index+1]
@@ -84,9 +95,10 @@ class Pdf_Utils:
             json_string = re.sub(r'//.*?\n', '', json_string)
             return json_string
         except Exception as e:
+            # Raise an exception if any error occurs during comment removal
             raise Exception(str(e))
 
-    def convert_doc(self, filename):
+    def convert_doc(self, filename, STATIC_DIR):
         """
         Convert a document file to PDF format.
 
@@ -96,9 +108,9 @@ class Pdf_Utils:
 
         try:
             # Construct the input and output paths
-            input_path = os.path.join('static', filename)
+            input_path = os.path.join(STATIC_DIR, filename)
             output_filename = f"{os.path.splitext(filename)[0]}.pdf"
-            output_path = os.path.join('static', output_filename)
+            output_path = os.path.join(STATIC_DIR, output_filename)
 
             # Convert the document file to PDF
             convert(input_path, output_path)
@@ -112,3 +124,39 @@ class Pdf_Utils:
             # Handle any errors that occur during conversion
             raise Exception(f"Error converting document: {e}")
             # return ''
+
+    def get_total_pages_pdf(self, pdfPath):
+        """
+        Get the total number of pages in a PDF file.
+
+        :param pdfPath: Path to the PDF file.
+        :return: Total number of pages in the PDF file.
+        """
+        try:
+            # Open the PDF file and count the number of pages
+            with pdfplumber.open(pdfPath) as pdf:
+                return len(pdf.pages)
+        except Exception as e:
+            # Handle any errors that occur while getting the page count
+            raise Exception(f"Error getting total pages of pdf: {str(e)}")
+
+    def get_docx_page_count(self, docx_fpath):
+        """
+        Get the total number of pages in a DOCX file by reading the document properties.
+
+        :param docx_fpath: Path to the DOCX file.
+        :return: Total number of pages in the DOCX file.
+        """
+        try:
+            # Open the DOCX file as a zip archive
+            docx_object = ZipFile(docx_fpath)
+
+            # Read the document properties from 'docProps/app.xml'
+            docx_property_file_data = docx_object.read('docProps/app.xml').decode()
+
+            # Use a regular expression to extract the page count from the document properties
+            page_count = re.search(r"<Pages>(\d+)</Pages>", docx_property_file_data).group(1)
+            return int(page_count)
+        except Exception as e:
+            # Handle any errors that occur while getting the page count
+            raise Exception(f"Error getting total pages of word file: {str(e)}")

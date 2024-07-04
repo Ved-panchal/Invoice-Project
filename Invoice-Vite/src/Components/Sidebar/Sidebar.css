@@ -1,0 +1,12 @@
+.bg-black {
+    opacity: 1 !important;
+    backdrop-filter: blur(10px) !important;
+    background-color: transparent !important;
+}
+
+.burgerbtn{
+    position: absolute !important;
+    top:5px !important;
+    left: 10px !important;
+    background-color: #7395b8;
+}

@@ -42,7 +42,7 @@ def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
         )
         login_manager.set_cookie(response, access_token)
         response.status_code = 200
-        response.body = json.dumps({"userId" : user["userId"]}).encode()  # Setting the body content of the response
+        response.body = json.dumps({"userId" : user["userId"]}).encode()
 
         return response
     
