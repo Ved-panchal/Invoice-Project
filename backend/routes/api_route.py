@@ -12,12 +12,13 @@ from util import utils, pdf_utils
 from extraction import get_pdf_name
 from database import mongo_conn
 from queue_service import queue_manager
-from routes import login_manager, STATIC_DIR
+from routes import  STATIC_DIR
+from .dependencies import role_required
 
 api_router = APIRouter()
 
 @api_router.post("/uploadFiles/{user_id}")
-async def upload_files(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
+async def upload_files(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(role_required(['user']))):
     filenames, uploaded_arr, not_uploaded_arr = [], [], []
     try:
         user_id = user['userId']
@@ -91,7 +92,7 @@ async def upload_files(user_id: str, response: Response, background_tasks: Backg
     return response
 
 @api_router.post('/delete_pdf')
-async def delete_file(payload: dict, response: Response, user=Depends(login_manager)):
+async def delete_file(payload: dict, response: Response, user=Depends(role_required(['user']))):
     mapping_obj_id = payload['fileId']
     try:
         data = mongo_conn.get_user_pdf_mapping_collection().find_one({"_id": ObjectId(mapping_obj_id)})
@@ -118,7 +119,7 @@ async def delete_file(payload: dict, response: Response, user=Depends(login_mana
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post('/invoice/get_data/{invoice_id}')
-def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
+def get_data_from_mongo(invoice_id: str, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
         data = mongo_conn.get_pdf_data_collection().find_one({"_id": ObjectId(invoice_id)})
@@ -132,7 +133,7 @@ def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post('/get_pdfs/{user_id}')
-def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_manager)):
+def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
         page = payload['page'] or 1
@@ -149,7 +150,7 @@ def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_ma
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get('/get_total_pages/{user_id}')
-def get_total_pages(user_id: str, user=Depends(login_manager)):
+def get_total_pages(user_id: str, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
         return mongo_conn.get_user_pdf_mapping_collection().count_documents({"userId": user_id})
@@ -157,7 +158,7 @@ def get_total_pages(user_id: str, user=Depends(login_manager)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post('/set_pdf_status')
-def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager)):
+def set_pdf_status(payload: dict, response: Response, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
         invoice_id = payload['invoiceId']
@@ -192,7 +193,7 @@ def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
 
 @api_router.get('/get_fields')
-def get_fields(response: Response, user=Depends(login_manager)):
+def get_fields(response: Response, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
 
@@ -209,7 +210,7 @@ def get_fields(response: Response, user=Depends(login_manager)):
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
     
 @api_router.post('/update_fields')
-def update_fields(response: Response, payload: dict, user=Depends(login_manager)):
+def update_fields(response: Response, payload: dict, user=Depends(role_required(['user']))):
     try:
         user_id = user['userId']
         fields = payload['fields']
