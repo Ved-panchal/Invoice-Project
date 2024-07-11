@@ -88,6 +88,7 @@ function UploadInvoicePage() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
 
+    // const socket = new WebSocket(`ws://85.13.195.92:5500/ws/${userId}`);
     const socket = new WebSocket(`ws://localhost:5500/ws/${userId}`);
 
     socket.onmessage = (event) => {
