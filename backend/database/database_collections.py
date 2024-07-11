@@ -10,6 +10,7 @@ class MongoDBConnection:
         self.pdf_data_collection_name = config("PDF_DATA_COLLECTION_NAME")
         self.user_pdf_mapping_collection_name = config("USER_PDF_COLLECTION_NAME")
         self.user_fields_collection_name = config("USER_FIELDS_COLLECTION_NAME")
+        self.sap_details_collection_name = config("SAP_DETAILS_COLLECTION_NAME")
 
         self.client = None
         self.db = None
@@ -17,6 +18,7 @@ class MongoDBConnection:
         self.pdf_data_collection = None
         self.user_pdf_mapping_collection = None
         self.user_fields_collection = None
+        self.sap_detalis_collection = None
 
         self.connect()
 
@@ -29,6 +31,8 @@ class MongoDBConnection:
             self.pdf_data_collection = self.db[self.pdf_data_collection_name]
             self.user_pdf_mapping_collection = self.db[self.user_pdf_mapping_collection_name]
             self.user_fields_collection = self.db[self.user_fields_collection_name]
+            self.sap_detalis_collection = self.db[self.sap_details_collection_name]
+            print("sap name", self.sap_details_collection_name)
             print("Successfully connected to MongoDB")
         except Exception as e:
             print(f"Failed to connect to MongoDB: {e}")
@@ -47,6 +51,9 @@ class MongoDBConnection:
     
     def get_user_fields_collection(self):
         return self.user_fields_collection
+    
+    def get_sap_detalis_collection(self):
+        return self.sap_detalis_collection
 
     def close(self):
         if self.client:

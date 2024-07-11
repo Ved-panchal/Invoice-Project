@@ -1,7 +1,7 @@
 from fastapi import File, HTTPException, UploadFile, BackgroundTasks, APIRouter, Depends
 from starlette.responses import Response
 
-import os, json
+import os, json, requests
 from datetime import datetime
 from pathlib import Path
 from bson import ObjectId
@@ -229,4 +229,67 @@ def update_fields(response: Response, payload: dict, user=Depends(login_manager)
     except Exception as e:
         response.status_code = 500
         response.body = json.dumps({"message": f"Unknown error has occured.\nDetails={str(e)}"}).encode()
+        raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
+    
+
+def sap_login_call(sap_details):
+    print("making login request")
+    response = requests.post(f"https://{sap_details['sapHost']}/b1s/v1/Login", json=sap_details['loginCredential'], verify=False)
+    print("login request status", response.status_code)
+    data = json.loads(response.content.decode('utf-8'))
+    print("login request data", data)
+    if response.status_code == 200:
+        return data['SessionId']
+    else:
+        return None
+
+def make_sap_call(sap_details, cardName):
+    if(sap_details['sessionId'] == ''):
+        sessionid = sap_login_call(sap_details)
+        if sessionid:
+            sap_details['sessionId'] = sessionid
+            return make_sap_call(sap_details, cardName)
+        return {"status": "failed login"}
+    else:
+        response = requests.get(f"https://{sap_details['sapHost']}/b1s/v1//Invoices?$select=CardCode&$filter=CardName eq '{cardName}'&$top=1",
+                                cookies={"B1SESSION" : sap_details['sessionId']}, verify=False)
+        if response.status_code == 401:
+            sessionid = sap_login_call(sap_details)
+            if sessionid:
+                sap_details['sessionId'] = sessionid
+                return make_sap_call(sap_details, cardName)
+            return {"status": "failed login"}
+        elif response.status_code == 200:
+            data = json.loads(response.content.decode('utf-8'))
+            print('data by sap api', data)
+            return {"status": "ok", "data": data, "sessionId": sap_details['sessionId']}
+        else:
+            print('unknown error in sap : ', sap_details)
+            return {"status": "failed"}
+
+
+@api_router.post('/get_sap_data')
+def get_sap_data(payload: dict, user=Depends(login_manager)):
+    try:
+        user_id = user['userId']
+        print("payload ->",payload)
+        # return"kk"
+        sap_details = mongo_conn.get_sap_detalis_collection().find_one({"userId" : user_id}, {"_id" : 0})
+        print("user id : ", user_id)
+        if sap_details is not None:
+            data = make_sap_call(sap_details, payload['cardName'])
+            if data['sessionId'] != sap_details['sessionId']:
+                update_data = {
+                    '$set': {
+                        'sessionId': data['sessionId']
+                    }
+                }
+                mongo_conn.get_sap_detalis_collection().update_one({"userId" : user_id}, update_data)
+            print("done making request data : ", data)
+            if(data['data']['value'] == []):
+                return {"status": "failed", "message": "check your card name"}
+            return {"status": "ok", "CardCode" : data['data']['value'][0]['CardCode']}
+        else :
+            return {"status": "failed", "message":"Your Sap is not configured"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")

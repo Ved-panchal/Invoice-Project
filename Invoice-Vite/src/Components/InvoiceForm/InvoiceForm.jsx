@@ -227,7 +227,10 @@ import showToast from '../../services/toast';
 const InvoiceForm = ({ invoiceData, scale, fileName}) => {
   const [invoice, setInvoice] = useState(invoiceData[0]);
   const dataArr = invoiceData.slice(1, invoiceData.length);
-  const [image_canvas, setImage_canvas] = useState([]);
+  const [image_canvas, setImage_canvas] = useState([])
+  const [isCardNamePresent, setIsCardNamePresent] = useState(false)
+  const [cardKeyName, setCardKeyName] = useState()
+  
 
   const loadCanvas = () => {
     const canvases = document.querySelectorAll('canvas');
@@ -332,6 +335,34 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
     }
   };
 
+  const handleSapGetData = async () => {
+    if(!isCardNamePresent){//double check
+      return;
+    }
+    try {
+      let response = await api.post('/get_sap_data',{ cardName : invoice[cardKeyName]});
+      if(response){
+        console.log("resd : ",response.data)
+        if(response.data.status != "ok"){
+          showToast({message:response.data.message, type:"error"})
+          return;
+        }
+        const updatedInvoice = { ...invoice };
+          for (let key in updatedInvoice) {
+            if (key.replace(/ /g,'').toLowerCase() === 'cardcode') {
+              updatedInvoice[key] = response.data.CardCode;
+            }
+          }
+          setInvoice(updatedInvoice);
+      } else {
+        console.log("resd : ",response.data)
+        
+      }
+    } catch (error) {
+      console.error('Error rejecting invoice', error);
+    }
+  };
+
 
   const handleAddRow = () => {
     setInvoice((prevInvoice) => ({
@@ -397,9 +428,14 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
       <h2 className="form-heading">Invoice Details</h2>
       <header>
         <div className="invoice-header">
-          {console.log("invoice", invoice)}
+          {/* {console.log("key", invoice[cardKeyName])} */}
           {Object.keys(invoice).map((key) => {
             if (key !== 'DocumentLines' && !Array.isArray(invoice[key])) {
+              let str_key = key.replace(/ /g,'').toLowerCase()
+              if(str_key == 'cardname' && !isCardNamePresent){
+                setCardKeyName(key)
+                setIsCardNamePresent(true)
+              }
               return (
                 <div className="form-group" key={key}>
                   <label htmlFor={key}>{key.replace(/([A-Z])/g, ' $1').trim()}:</label>
@@ -469,6 +505,7 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
       <div className="action-buttons">
         <button className="approve-btn" onClick={() => {handleSubmit("1")}}>Approve</button>
         <button className="reject-btn" onClick={() => {handleSubmit("0")}}>Reject</button>
+        {isCardNamePresent && <button className="reject-btn" onClick={() => {handleSapGetData()}}>Get SAP</button>}
       </div>
     </div>
   );
