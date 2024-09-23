@@ -356,7 +356,6 @@ const InvoiceForm = ({ invoiceData, scale, fileName}) => {
           setInvoice(updatedInvoice);
       } else {
         console.log("resd : ",response.data)
-        
       }
     } catch (error) {
       console.error('Error rejecting invoice', error);

@@ -228,6 +228,7 @@ const styles = {
     width: '80%',
     maxWidth: '400px',
     fontFamily: "'Poppins', sans-serif",
+    borderRadius: '10px'
   },
   button: {
     padding: '10px 20px',
@@ -278,7 +279,7 @@ const styles = {
     marginBottom: '10px',
     backgroundColor: '#34495e',
     borderRadius: '5px',
-    color: '#ecf0f1',
+    color: '#000',
     fontFamily: "'Poppins', sans-serif",
   },
 };

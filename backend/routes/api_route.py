@@ -273,7 +273,6 @@ def get_sap_data(payload: dict, user=Depends(login_manager)):
     try:
         user_id = user['userId']
         print("payload ->",payload)
-        # return"kk"
         sap_details = mongo_conn.get_sap_detalis_collection().find_one({"userId" : user_id}, {"_id" : 0})
         print("user id : ", user_id)
         if sap_details is not None:
