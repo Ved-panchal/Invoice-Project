@@ -8,10 +8,10 @@ const config = {
   jwt: {
     secret: "",
   },
-  apiurl: "http://localhost:5500",
-  socketurl: "localhost:5500",
-  //   apiurl: "http://85.13.195.92:5500",
-  //   socketurl: "85.13.195.92:5500",
+  // apiurl: "http://localhost:5500",
+  // socketurl: "localhost:5500",
+    apiurl: "http://85.13.195.92:5500",
+    socketurl: "85.13.195.92:5500",
 };
 
 export default config;

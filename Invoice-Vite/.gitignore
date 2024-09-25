@@ -1,2 +1,5 @@
 node_modules
 Components/temp.jsx
+dist
+dist\*
+dist\*\*
