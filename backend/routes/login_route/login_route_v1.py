@@ -22,7 +22,7 @@ def load_user(username: str):  # could also be an asynchronous function
     user = mongo_conn.get_users_collection().find_one({'username' : username})
     return user
 
-@login_router.post('/auth/token')
+@login_router.post('/auth/token', tags=["v1"])
 def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
     try:
         username = data.username
@@ -42,14 +42,14 @@ def login(response: Response, data: OAuth2PasswordRequestForm = Depends()):
         )
         login_manager.set_cookie(response, access_token)
         response.status_code = 200
-        response.body = json.dumps({"userId" : user["userId"]}).encode()
+        response.body = json.dumps({"access_token" : access_token}).encode()
 
         return response
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@login_router.post('/auth/logout')
+@login_router.post('/auth/logout', tags=["v1"])
 def logout(response: Response):
     try:
         # Remove the authentication cookie

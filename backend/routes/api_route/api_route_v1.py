@@ -19,7 +19,7 @@ from decouple import config
 
 api_router = APIRouter()
 
-@api_router.post("/uploadFiles/{user_id}")
+@api_router.post("/uploadFiles/{user_id}",tags=["v1"])
 async def upload_files(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
     filenames, uploaded_arr, not_uploaded_arr = [], [], []
     try:
@@ -93,7 +93,7 @@ async def upload_files(user_id: str, response: Response, background_tasks: Backg
 
     return response
 
-@api_router.post('/delete_pdf')
+@api_router.post('/delete_pdf',tags=["v1"])
 async def delete_file(payload: dict, response: Response, user=Depends(login_manager)):
     mapping_obj_id = payload['fileId']
     try:
@@ -120,7 +120,7 @@ async def delete_file(payload: dict, response: Response, user=Depends(login_mana
         print(f'Error: {str(e)}')
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post('/invoice/get_data/{invoice_id}')
+@api_router.post('/invoice/get_data/{invoice_id}',tags=["v1"])
 def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -134,7 +134,7 @@ def get_data_from_mongo(invoice_id: str, user=Depends(login_manager)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post('/get_pdfs/{user_id}')
+@api_router.post('/get_pdfs/{user_id}',tags=["v1"])
 def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -151,7 +151,7 @@ def get_page_data_from_userid(user_id: str, payload: dict, user=Depends(login_ma
         print(f'Error in get_pdfs: {str(e)}')
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.get('/get_total_pages/{user_id}')
+@api_router.get('/get_total_pages/{user_id}',tags=["v1"])
 def get_total_pages(user_id: str, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -159,7 +159,7 @@ def get_total_pages(user_id: str, user=Depends(login_manager)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api_router.post('/set_pdf_status')
+@api_router.post('/set_pdf_status',tags=["v1"])
 def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -194,7 +194,7 @@ def set_pdf_status(payload: dict, response: Response, user=Depends(login_manager
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
 
-@api_router.get('/get_fields')
+@api_router.get('/get_fields',tags=["v1"])
 def get_fields(response: Response, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -211,7 +211,7 @@ def get_fields(response: Response, user=Depends(login_manager)):
         response.status_code = 500
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
 
-@api_router.post('/update_fields')
+@api_router.post('/update_fields',tags=["v1"])
 def update_fields(response: Response, payload: dict, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -271,7 +271,7 @@ def make_sap_call(sap_details, cardName):
             return {"status": "failed"}
 
 
-@api_router.post('/get_sap_data')
+@api_router.post('/get_sap_data',tags=["v1"])
 def get_sap_data(payload: dict, user=Depends(login_manager)):
     try:
         user_id = user['userId']
@@ -297,8 +297,8 @@ def get_sap_data(payload: dict, user=Depends(login_manager)):
         raise HTTPException(status_code=500, detail=f"Unknown error has occured.\nDetails={str(e)}")
     
 
-@api_router.post("/get_json_data/{user_id}")
-async def upload_files_json(user_id: str, response: Response, background_tasks: BackgroundTasks, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
+@api_router.post("/get_json_data",tags=["v1"])
+async def upload_files_json(response: Response, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
     filenames, uploaded_arr, not_uploaded_arr = [], [], []
     try:
         user_id = user['userId']
@@ -379,7 +379,7 @@ async def upload_files_json(user_id: str, response: Response, background_tasks: 
 
     except Exception as e:
         print("Error uploading files:", e)
-        response.status_code = 500
+        response.status_code = 200
         response.body = json.dumps({"error": str(e)}).encode()
 
     return response

@@ -6,8 +6,9 @@ import ssl
 
 from routes.test_route import test_router
 from routes.scoket_route import socket_router
-from routes.login_route import login_router
-from routes.api_route import api_router
+from routes.login_route.login_route_v1 import login_router
+from routes.api_route.api_route_v1 import api_router
+from routes.api_route.api_route_v2 import api_router_v2
 
 from logger import logger
 
@@ -21,6 +22,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include routers
+app.include_router(router=api_router_v2, prefix="/v2")
 app.include_router(router=test_router)
 app.include_router(router=socket_router)
 app.include_router(router=login_router)
@@ -29,8 +31,8 @@ app.include_router(router=api_router)
 # Allow cross origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://85.13.195.92:5173", "http://192.168.10.205:5173", "http://localhost:5173", "http://0.0.0.0:5173"],
-    # allow_origins=["http://localhost:5173"],
+    #allow_origins=["http://85.13.195.92:5173", "http://192.168.10.205:5173", "http://localhost:5173", "http://0.0.0.0:5173"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
