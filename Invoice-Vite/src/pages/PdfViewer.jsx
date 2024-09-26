@@ -30,7 +30,6 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       }
       try {
         const response = await api.post(`/invoice/get_data/${fileName}`);
-        console.log("data", response.data)
         setData(response.data['data']);
         setPdfName(response.data['pdfName'])
       } catch (error) {
@@ -39,6 +38,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
     };
 
     if (data.length === 0) {
+      console.log(data);
       getData();
     }
 
@@ -65,7 +65,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
         }
       });
     }
-  }, [pdfUrl, fileCode, imgCondition, data.length]);
+  }, [pdfUrl, fileCode, imgCondition, fileName]);
 
   return (
     <div>
@@ -77,7 +77,7 @@ const PdfViewer = ({ pdfUrl, fileName, fileCode }) => {
       </div>
       <div className="container-pdfview">
         <div className="pdf-content">
-          {data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val} fileName={fileName}/> : <div className="loader">Loading...</div>}
+          {data == null ? <div className='text-white font-bold text-lg-center align-content-center'>Data cant be extracted</div>: data.length > 0 ? <InvoiceForm invoiceData={data} scale={scale_val} fileName={fileName}/> : <div className="loader">Loading...</div>}
         </div>
         {imgCondition ? (
           <div className="pdf-view">

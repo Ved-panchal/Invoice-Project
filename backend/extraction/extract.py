@@ -109,7 +109,7 @@ def _process_file(client, filename: str, user_id: str) -> str:
             result = pdf_data_col.insert_one(data)
             logger.info('Received data inserted into PdfData collection.')
             if result:
-                result = str(result.inserted_id) + "0"
+                result = [str(result.inserted_id) + "0", json_data[0]]
             else:
                 raise HTTPException(status_code=400, detail="Database insertion error")
             return result
@@ -183,7 +183,7 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         logger.info(f'Total pages in the PDF: {total_pages}')
 
         logger.info('Sent Pdf for processing.')
-        new_file_id = _process_file(client, filename, user_id)
+        [new_file_id, json_data] = _process_file(client, filename, user_id)
         logger.info('Received new pdf id after processing.')
 
         # Construct new filename using file_id and the original extension
@@ -200,7 +200,7 @@ def _store_pdf_data(client, user_id, filename: str, STATIC_DIR):
         # Subtract total_pages from totalCredits ensuring it does not go below 0
         update_credits(user_id, total_pages)
 
-        return [new_file_id, total_pages]
+        return [new_file_id, total_pages, json_data]
     except Exception as e:
         logger.exception("Error in _store_pdf_data")
         # update_operation = {

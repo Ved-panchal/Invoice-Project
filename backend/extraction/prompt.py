@@ -174,7 +174,6 @@ def generate_dynamic_prompt(text, fields_with_descriptions: dict):
         f"{descriptions}"
         f"Keep date format as in input text. NO COMMENTS.\n"
         f"Unit price and quantity should be in number only from the data and give me in string in json format.\n"
-        f"STRICTLY WARNING : IF THERE IS NO FIELDS PROVIDED IN DOCUMENT LINES, THEN DO NOT PROVIDE DATA FOR ANY FIELDS.\n"
         f"STRICTLY WARNING : DO NOT CALCULATE ANYTHING BY YOUR ONLY GIVE THAT DATA THAT YOU GET FROM INVOICE.\n"
         f"STRICTLY WARNING: DO NOT ADD ANY COMMENTS AND EXTRA FEILDS IN JSON DATA. GIVE ME DATA THAT IS PURLY IN JSON FORMAT PROVIDED ABOVE. PROVIDE VALUE IN JSON IN STRING FORMAT."
         f"This are the fields that you need to extract from this invoice text, please provide all the data exactly given in invoice and yes you can calculate some terms but don't cut any data from invoice and reply me with every data."

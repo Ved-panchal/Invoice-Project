@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends
 from routes import login_manager
-from.dependencies import role_required
 
 test_router = APIRouter()
 
-@test_router.get("/hello")
-def hello(user=Depends(role_required(['admin', 'user']))):
+@test_router.get("/hello",tags=["v1"])
+def hello(user=Depends(login_manager)):
     # print(f"username: {user.username}")
     print(f"user: {user}")
     print(f"username: {user['username']}")
     return "hello"
+
+@test_router.get('/file',tags=["v1"])
+def fileTest():
+    return "hello from file"
