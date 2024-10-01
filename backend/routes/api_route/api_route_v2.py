@@ -1,26 +1,41 @@
 from fastapi import File, HTTPException, UploadFile, APIRouter, Depends
 from starlette.responses import Response, JSONResponse
+from pydantic import BaseModel
 
 
 import os, json, requests
 from datetime import datetime
 from io import BytesIO
+from pymongo.collection import ReturnDocument
 
 from models import PDFApprovalStatus, PDFUploadStatus
 from util import pdf_utils
-from extraction import store_pdf_data
+from extraction import store_pdf_data_v2
 from database import mongo_conn
-from routes import login_manager, STATIC_DIR
+from routes import login_manager_v2, STATIC_DIR
 from together import Together
 from decouple import config
+from routes.dependencies import role_required
+
+from doctr.models import ocr_predictor
+
 
 api_router_v2 = APIRouter()
 client = Together(
     api_key=config(f"TOGETHER_API_KEY_4")
 )
+ocrmodel = ocr_predictor('db_resnet50', 'crnn_vgg16_bn', pretrained=True)
 
-@api_router_v2.post("/get_json_data",tags=["v2"])
-async def upload_files_json(response: Response, documents: list[UploadFile] = File(...), user=Depends(login_manager)):
+
+@api_router_v2.get("/hello")
+def hello(user=Depends(login_manager_v2)):
+    # print(f"username: {user.username}")
+    print(f"user: {user}")
+    print(f"username: {user['username']}")
+    return "hello"
+
+@api_router_v2.post("/get_json_data")
+async def upload_files_json(response: Response, documents: list[UploadFile] = File(...), user=Depends(login_manager_v2)):
     filenames, uploaded_arr, not_uploaded_arr = [], [], []
     try:
         user_id = user['userId']
@@ -33,6 +48,7 @@ async def upload_files_json(response: Response, documents: list[UploadFile] = Fi
         total_credits = credits['totalCredits']
         # print(f"total credits: {total_credits}")
 
+        resultArr = []
         for document in documents:
             file_ext = document.filename.split('.')[-1].lower()
 
@@ -78,15 +94,15 @@ async def upload_files_json(response: Response, documents: list[UploadFile] = Fi
                 uploaded_arr.append(document.filename)
 
             else:
-                not_uploaded_arr.append(document.filename)
+                response_json = {"FileName" : document.filename, "Error": "Insufficient Credits"}
+                resultArr.append(response_json)
 
 
         # Schedule the upload_files_to_queue task as a background task
-        
-        resultArr = []
+
         for Index ,file in enumerate(filenames):
             # print(file)
-            result = store_pdf_data(client,user_id,file,STATIC_DIR)
+            result = store_pdf_data_v2(client,user_id,file,STATIC_DIR,ocrmodel)
             # print(result)
             if result is not None:
                 response_json = {"FileName" : uploaded_arr[Index], "Data": result[2]}
@@ -102,3 +118,126 @@ async def upload_files_json(response: Response, documents: list[UploadFile] = Fi
         response.body = json.dumps({"error": str(e)}).encode()
 
     return response
+
+
+def get_next_user_id():
+    counter = mongo_conn.get_db()["Counter"].find_one_and_update(
+        {"cntName": "userId"},  # This identifies the user counter
+        {"$inc": {"sequence_value": 1}},  # Increment the sequence value by 1
+        return_document=ReturnDocument.AFTER,  # Return the updated document after the increment
+        upsert=True  # Create the counter document if it doesn't exist
+    )
+    return str(counter['sequence_value'])
+
+class CreateUserRequest(BaseModel):
+    company_name: str
+    username: str
+    password: str
+    # access_token: str = ""
+    isAdmin: bool
+    totalCredits: int = 0  # Default to 0 if not provided
+
+@api_router_v2.post("/admin/create_user")
+def create_user(response: Response, request: CreateUserRequest, current_user: dict = Depends(role_required(["admin"], login_manager_v2))):
+    try:
+        # Check if the username already exists
+        existing_user = mongo_conn.get_users_collection().find_one({"username": request.username})
+        if existing_user:
+            response.status_code = 200
+            response.body = json.dumps({"error": "username already exist"}).encode()
+            return response
+        # Create the new user data
+        new_user = {
+            "company_name": request.company_name,
+            "username": request.username,
+            "password": request.password,  # Make sure to hash the password in a real-world application
+            # "access_token": request.access_token,
+            "role" : ["user"],
+            "totalCredits": request.totalCredits,  # Initialize the total credits to the credit limit
+            "createdAt": datetime.now(),
+            "modifiedAt": datetime.now()
+        }
+        if(request.isAdmin):
+            new_user["role"] = ["user", "admin"]
+
+        user_id = get_next_user_id()
+        new_user['userId'] = user_id
+
+        # Insert the new user into the database
+        mongo_conn.get_users_collection().insert_one(new_user)
+
+        response.status_code = 200
+        response.body = json.dumps({"message": f"User '{request.username}' created successfully."}).encode()
+        return response
+
+    except Exception as e:
+        # Handle any other exceptions
+        response.status_code = 200
+        response.body = json.dumps({"error": str(e)}).encode()
+        return response
+
+
+class Update_credits(BaseModel):
+    username: str
+    new_credits: int
+
+@api_router_v2.post("/admin/update_credits")
+def update_credits(response: Response, request: Update_credits, current_user: dict = Depends(role_required(["admin"], login_manager_v2))):
+    try:
+        # Check if the username already exists
+        user = mongo_conn.get_users_collection().find_one({"username": request.username})
+        if not user:
+            response.status_code = 200
+            response.body = json.dumps({"error": "coudn't find uesr with given username"}).encode()
+            return response
+
+        old_credits = user.get("totalCredits", 0)
+
+        # Update the user's credits
+        mongo_conn.get_users_collection().update_one(
+            {"username": request.username},  # Filter to find the user by username
+            {"$set": {"totalCredits": request.new_credits, "modifiedAt": datetime.now()}}  # Update total credits and modifiedAt fields
+        )
+
+        # Return a success response with old and new credits
+        response.status_code = 200
+        response.body = json.dumps({
+            "message": f"User '{request.username}' credits updated successfully.",
+            "old_credits": old_credits,
+            "new_credits": request.new_credits
+        }).encode()
+        return response
+
+    except Exception as e:
+        # Handle any other exceptions
+        response.status_code = 200
+        response.body = json.dumps({"error": str(e)}).encode()
+        return response
+    
+
+class Get_credits(BaseModel):
+    username: str
+
+@api_router_v2.get("/get_credits")
+def get_credits(response: Response, request: Get_credits, current_user: dict = Depends(login_manager_v2)):
+    try:
+        # Check if the username already exists
+        user = mongo_conn.get_users_collection().find_one({"username": request.username})
+        if not user:
+            response.status_code = 200
+            response.body = json.dumps({"error": "coudn't find uesr with given username"}).encode()
+            return response
+
+        # Return a success response with old and new credits
+        response.status_code = 200
+        response.body = json.dumps({
+            "message": f"User '{request.username}' credits fetched successfully.",
+            "totalCredits": user["totalCredits"]
+        }).encode()
+        return response
+
+    except Exception as e:
+        # Handle any other exceptions
+        response.status_code = 200
+        response.body = json.dumps({"error": str(e)}).encode()
+        return response

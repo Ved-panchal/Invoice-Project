@@ -7,6 +7,7 @@ import ssl
 from routes.test_route import test_router
 from routes.scoket_route import socket_router
 from routes.login_route.login_route_v1 import login_router
+from routes.login_route.login_route_v2 import login_router as login_router_v2
 from routes.api_route.api_route_v1 import api_router
 from routes.api_route.api_route_v2 import api_router_v2
 
@@ -22,11 +23,12 @@ ssl._create_default_https_context = ssl._create_unverified_context
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include routers
-app.include_router(router=api_router_v2, prefix="/v2")
+app.include_router(router=api_router_v2, prefix="/v2", tags=["v2"])
+app.include_router(router=api_router)
+app.include_router(router=login_router_v2, prefix="/v2",tags=["v2"])
+app.include_router(router=login_router)
 app.include_router(router=test_router)
 app.include_router(router=socket_router)
-app.include_router(router=login_router)
-app.include_router(router=api_router)
 
 # Allow cross origin
 app.add_middleware(
