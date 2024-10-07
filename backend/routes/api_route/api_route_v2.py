@@ -10,12 +10,13 @@ from pymongo.collection import ReturnDocument
 
 from models import PDFApprovalStatus, PDFUploadStatus
 from util import pdf_utils
-from extraction import store_pdf_data_v2
+from extraction.extract_v2 import _store_pdf_data as store_pdf_data_v2
 from database import mongo_conn
 from routes import login_manager_v2, STATIC_DIR
 from together import Together
 from decouple import config
 from routes.dependencies import role_required
+from extraction.prompt import _default_fields
 
 from doctr.models import ocr_predictor
 
@@ -133,6 +134,7 @@ class CreateUserRequest(BaseModel):
     company_name: str
     username: str
     password: str
+    email: str
     # access_token: str = ""
     isAdmin: bool
     totalCredits: int = 0  # Default to 0 if not provided
@@ -152,6 +154,7 @@ def create_user(response: Response, request: CreateUserRequest, current_user: di
             "username": request.username,
             "password": request.password,  # Make sure to hash the password in a real-world application
             # "access_token": request.access_token,
+            "email": request.email,
             "role" : ["user"],
             "totalCredits": request.totalCredits,  # Initialize the total credits to the credit limit
             "createdAt": datetime.now(),
@@ -165,6 +168,9 @@ def create_user(response: Response, request: CreateUserRequest, current_user: di
 
         # Insert the new user into the database
         mongo_conn.get_users_collection().insert_one(new_user)
+
+        # Insert default fields for new user 
+        mongo_conn.get_user_fields_collection().insert_one({"userId": user_id, "fields": _default_fields})
 
         response.status_code = 200
         response.body = json.dumps({"message": f"User '{request.username}' created successfully."}).encode()

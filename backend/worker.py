@@ -6,7 +6,7 @@ from decouple import config
 from pathlib import Path
 
 from logger import logger
-from extraction import store_pdf_data
+from extraction.extract import _store_pdf_data as store_pdf_data 
 
 if len(sys.argv) != 2:
     logger.error("Usage: python worker.py <API_KEY_NO>")

@@ -10,7 +10,7 @@ from io import BytesIO
 
 from models import PDFApprovalStatus, PDFUploadStatus
 from util import utils, pdf_utils
-from extraction import get_pdf_name, store_pdf_data
+from extraction.extract import _get_pdf_name as get_pdf_name, _store_pdf_data as store_pdf_data
 from database import mongo_conn
 from queue_service import queue_manager
 from routes import login_manager, STATIC_DIR
