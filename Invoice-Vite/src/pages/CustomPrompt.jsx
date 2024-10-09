@@ -77,8 +77,8 @@ function CustomPrompt() {
   const handleSave = async () => {
     const allFields = [...directFields, ...tableFields];
     for (let field of allFields) {
-      if (!field.name || field.name.length > 15 || !field.description || field.description.length > 100) {
-        setError("Field name must not exceed 15 characters and description must not exceed 100 characters.");
+      if (!field.name || field.name.length > 50 || !field.description || field.description.length > 500) {
+        setError("Field name must not exceed 50 characters and description must not exceed 500 characters.");
         return;
       }
     }
