@@ -73,19 +73,24 @@ def _get_invoice_data_text(client, pdf_path: TextData, user_id: str, ocrmodel: O
             result = ocrmodel(doc)
             flag = False
             pdf_data = result.render()
-
+        
         logger.info('Received data from PdfPlumber.')
-        result = _get_data_from_gpt(client, pdf_data, user_id)
-        print(f'result: {result}')
+        gpt_result = _get_data_from_gpt(client, pdf_data, user_id)
+        print(f'gpt_result: {gpt_result}')
         logger.info('Received response from Qwen.')
-        if result:
-            extracted_text = pdf_utils.remove_comments_from_json(result)
+        if gpt_result:
+            extracted_text = pdf_utils.remove_comments_from_json(gpt_result)
             json_data = json.loads(extracted_text)
             print(f'json_data: {json_data}')
             if flag:
                 res_list = pdf_utils.get_cords_of_word(json_data, pdf_path)
-                return res_list
-            return [json_data]
+            else:
+                res_list = pdf_utils.get_cords_of_word_v2(json_data,result)
+
+            # print("####################################################################################################################")
+            # print(res_list, " falg ", flag)
+            # print("####################################################################################################################")
+            return res_list
         else:
             raise Exception('Could not fetch data from API.')
     except Exception as e:

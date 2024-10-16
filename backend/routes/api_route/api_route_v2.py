@@ -117,7 +117,6 @@ async def upload_files_json(response: Response, documents: list[UploadFile] = Fi
         print("Error uploading files:", e)
         response.status_code = 200
         response.body = json.dumps({"error": str(e)}).encode()
-
     return response
 
 
@@ -219,7 +218,7 @@ def update_credits(response: Response, request: Update_credits, current_user: di
         response.status_code = 200
         response.body = json.dumps({"error": str(e)}).encode()
         return response
-    
+
 
 class Get_credits(BaseModel):
     username: str
