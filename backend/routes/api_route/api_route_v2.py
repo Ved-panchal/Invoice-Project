@@ -1,3 +1,4 @@
+import img2pdf
 from fastapi import File, HTTPException, UploadFile, APIRouter, Depends
 from starlette.responses import Response, JSONResponse
 from pydantic import BaseModel
@@ -55,15 +56,19 @@ async def upload_files_json(response: Response, documents: list[UploadFile] = Fi
 
             file_data = document.file.read()
             buf = BytesIO(file_data)
+            allowed_Image_format = ['jpeg', 'jpg', 'png']
 
             if file_ext == 'pdf':
                 total_pages = pdf_utils.get_total_pages_pdf(buf)
             elif file_ext == 'docx':
                 total_pages = pdf_utils.get_docx_page_count(buf)
+            elif file_ext in allowed_Image_format:
+                total_pages = 1
+                file_data = img2pdf.convert(buf)
+                file_ext = 'pdf'
             else:
                 total_pages = 0
                 raise Exception("Invalid file type.")
-
             # # get total pages for current document
             # print(f"total pages: {total_pages}")
 
