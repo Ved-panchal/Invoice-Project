@@ -5,7 +5,8 @@ import json, os
 
 from logger import logger
 from models import TextData, PDFUploadStatus
-from util import pdf_utils
+from util.pdf_utils_v2 import Pdf_Utils
+pdf_utils = Pdf_Utils()
 from .prompt import generate_dynamic_prompt, _default_fields
 from database import mongo_conn
 

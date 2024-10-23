@@ -10,7 +10,8 @@ from io import BytesIO
 from pymongo.collection import ReturnDocument
 
 from models import PDFApprovalStatus, PDFUploadStatus
-from util import pdf_utils
+from util.pdf_utils_v2 import Pdf_Utils
+pdf_utils = Pdf_Utils()
 from extraction.extract_v2 import _store_pdf_data as store_pdf_data_v2
 from database import mongo_conn
 from routes import login_manager_v2, STATIC_DIR
