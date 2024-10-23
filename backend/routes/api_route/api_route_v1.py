@@ -9,7 +9,8 @@ from bson import ObjectId
 from io import BytesIO
 
 from models import PDFApprovalStatus, PDFUploadStatus
-from util.pdf_utils import utils, Pdf_Utils
+from util import utils
+from util.pdf_utils import Pdf_Utils
 pdf_utils = Pdf_Utils()
 from extraction.extract import _get_pdf_name as get_pdf_name, _store_pdf_data as store_pdf_data
 from database import mongo_conn
